@@ -1,0 +1,323 @@
+// ==========================================
+// PM CHECKLIST PAGE - Part 1: Admin Template Manager
+// ==========================================
+
+const CHECKLIST_TYPES = [
+    { id: 'type1',    label: 'Type 1',    icon: 'fa-1',  color: 'from-blue-500 to-cyan-500' },
+    { id: 'type2',    label: 'Type 2',    icon: 'fa-2',  color: 'from-amber-500 to-orange-500' },
+    { id: 'type3',    label: 'Type 3',    icon: 'fa-3',  color: 'from-emerald-500 to-green-500' },
+];
+
+// ==========================================
+// CHECKLIST TEMPLATE MANAGER (Admin Only)
+// ==========================================
+function ChecklistTemplateManager({ showToast, onBack }) {
+    const h = React.createElement;
+    const [templates, setTemplates] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [showForm, setShowForm] = React.useState(false);
+    const [editingTemplate, setEditingTemplate] = React.useState(null);
+    const [formData, setFormData] = React.useState({
+        template_name: '',
+        checklist_type: 'type1',
+        items: [{ name: '', category: '' }]
+    });
+
+    // Load templates
+    React.useEffect(() => {
+        loadTemplates();
+    }, []);
+
+    const loadTemplates = async () => {
+        setLoading(true);
+        try {
+            if (window.supabaseClient) {
+                const { data, error } = await window.supabaseClient
+                    .from('pm_checklist_templates')
+                    .select('*')
+                    .eq('is_active', true)
+                    .order('created_at', { ascending: false });
+                if (error) throw error;
+                setTemplates(data || []);
+            } else {
+                // Demo data
+                setTemplates([
+                    { id: 'demo-1', template_name: 'Mold Maintenance Type 1', checklist_type: 'type1', items: [
+                        { name: 'ตรวจสอบสภาพผิวหน้าแม่พิมพ์', category: 'Visual' },
+                        { name: 'ตรวจสอบระบบหล่อเย็น', category: 'Cooling' },
+                        { name: 'ตรวจเช็คสลักนำ (Guide Pin)', category: 'Mechanical' },
+                    ]},
+                    { id: 'demo-2', template_name: 'Mold Maintenance Type 2', checklist_type: 'type2', items: [
+                        { name: 'ทำความสะอาด Cavity ทั้งหมด', category: 'Cleaning' },
+                        { name: 'ตรวจสอบ Ejector Pin', category: 'Mechanical' },
+                        { name: 'ตรวจสอบ O-Ring ระบบน้ำ', category: 'Sealing' },
+                        { name: 'ตรวจวัดขนาด Core/Cavity', category: 'Measurement' },
+                    ]},
+                ]);
+            }
+        } catch (err) {
+            console.error('Load templates error:', err);
+            showToast('โหลดข้อมูลเทมเพลตล้มเหลว', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const resetForm = () => {
+        setFormData({ template_name: '', checklist_type: 'type1', items: [{ name: '', category: '' }] });
+        setEditingTemplate(null);
+        setShowForm(false);
+    };
+
+    const handleEdit = (tmpl) => {
+        setEditingTemplate(tmpl);
+        setFormData({
+            template_name: tmpl.template_name,
+            checklist_type: tmpl.checklist_type,
+            items: Array.isArray(tmpl.items) ? [...tmpl.items] : [{ name: '', category: '' }]
+        });
+        setShowForm(true);
+    };
+
+    const addItem = () => {
+        setFormData(prev => ({
+            ...prev,
+            items: [...prev.items, { name: '', category: '' }]
+        }));
+    };
+
+    const removeItem = (idx) => {
+        setFormData(prev => ({
+            ...prev,
+            items: prev.items.filter((_, i) => i !== idx)
+        }));
+    };
+
+    const updateItem = (idx, field, value) => {
+        setFormData(prev => {
+            const items = [...prev.items];
+            items[idx] = { ...items[idx], [field]: value };
+            return { ...prev, items };
+        });
+    };
+
+    const handleSave = async () => {
+        if (!formData.template_name.trim()) {
+            showToast('กรุณากรอกชื่อเทมเพลต', 'warning');
+            return;
+        }
+        const validItems = formData.items.filter(it => it.name.trim());
+        if (validItems.length === 0) {
+            showToast('กรุณาเพิ่มรายการตรวจอย่างน้อย 1 รายการ', 'warning');
+            return;
+        }
+
+        try {
+            const payload = {
+                template_name: formData.template_name.trim(),
+                checklist_type: formData.checklist_type,
+                items: validItems,
+                is_active: true,
+            };
+
+            if (window.supabaseClient) {
+                if (editingTemplate && editingTemplate.id && !editingTemplate.id.startsWith('demo')) {
+                    await window.supabaseClient.from('pm_checklist_templates')
+                        .update(payload).eq('id', editingTemplate.id);
+                } else {
+                    await window.supabaseClient.from('pm_checklist_templates')
+                        .insert(payload);
+                }
+            } else {
+                // Demo mode - add locally
+                const newTmpl = { ...payload, id: 'demo-' + Date.now() };
+                setTemplates(prev => [newTmpl, ...prev]);
+            }
+
+            showToast(editingTemplate ? 'อัปเดตเทมเพลตสำเร็จ' : 'สร้างเทมเพลตสำเร็จ', 'success');
+            resetForm();
+            if (window.supabaseClient) loadTemplates();
+        } catch (err) {
+            console.error('Save template error:', err);
+            showToast('บันทึกล้มเหลว', 'error');
+        }
+    };
+
+    const handleDelete = async (tmpl) => {
+        if (!confirm('ต้องการลบเทมเพลตนี้หรือไม่?')) return;
+        try {
+            if (window.supabaseClient && !tmpl.id.startsWith('demo')) {
+                await window.supabaseClient.from('pm_checklist_templates')
+                    .update({ is_active: false }).eq('id', tmpl.id);
+            }
+            setTemplates(prev => prev.filter(t => t.id !== tmpl.id));
+            showToast('ลบเทมเพลตสำเร็จ', 'success');
+        } catch (err) {
+            showToast('ลบล้มเหลว', 'error');
+        }
+    };
+
+    const getTypeInfo = (typeId) => CHECKLIST_TYPES.find(t => t.id === typeId) || CHECKLIST_TYPES[0];
+
+    // ---- RENDER ----
+    if (showForm) {
+        return h('div', { className: 'space-y-6 animate-fade-in' },
+            // Header
+            h('div', { className: 'flex items-center gap-3' },
+                h('button', { className: 'btn btn-ghost btn-sm', onClick: resetForm },
+                    h('i', { className: 'fa-solid fa-arrow-left' })
+                ),
+                h('h2', { className: 'text-lg font-semibold' }, editingTemplate ? 'แก้ไขเทมเพลต' : 'สร้างเทมเพลตใหม่')
+            ),
+
+            // Form Card
+            h('div', { className: 'card space-y-5' },
+                // Template Name
+                h('div', null,
+                    h('label', { className: 'block text-sm font-medium text-surface-300 mb-1.5' }, 'ชื่อเทมเพลต'),
+                    h('input', {
+                        className: 'input',
+                        placeholder: 'เช่น Mold Maintenance Type 1',
+                        value: formData.template_name,
+                        onChange: e => setFormData(p => ({ ...p, template_name: e.target.value }))
+                    })
+                ),
+
+                // Type Selector
+                h('div', null,
+                    h('label', { className: 'block text-sm font-medium text-surface-300 mb-1.5' }, 'ประเภทเช็คลิส'),
+                    h('div', { className: 'grid grid-cols-3 gap-3' },
+                        CHECKLIST_TYPES.map(type =>
+                            h('div', {
+                                key: type.id,
+                                className: `p-3 rounded-xl border cursor-pointer transition-all text-center ${
+                                    formData.checklist_type === type.id
+                                        ? 'border-primary-500 bg-primary-500/10'
+                                        : 'border-white/5 bg-white/[0.02] hover:border-white/15'
+                                }`,
+                                onClick: () => setFormData(p => ({ ...p, checklist_type: type.id }))
+                            },
+                                h('i', { className: `fa-solid ${type.icon} text-lg mb-1 ${formData.checklist_type === type.id ? 'text-primary-400' : 'text-surface-500'}` }),
+                                h('p', { className: `text-xs font-medium ${formData.checklist_type === type.id ? 'text-primary-300' : 'text-surface-400'}` }, type.label)
+                            )
+                        )
+                    )
+                ),
+
+                // Checklist Items
+                h('div', null,
+                    h('div', { className: 'flex items-center justify-between mb-2' },
+                        h('label', { className: 'text-sm font-medium text-surface-300' }, 'รายการตรวจสอบ'),
+                        h('span', { className: 'badge badge-primary' }, formData.items.length + ' รายการ')
+                    ),
+                    h('div', { className: 'space-y-2' },
+                        formData.items.map((item, idx) =>
+                            h('div', { key: idx, className: 'flex gap-2 items-start animate-fade-in' },
+                                h('span', { className: 'text-xs text-surface-600 mt-2.5 w-6 text-right flex-shrink-0' }, (idx + 1) + '.'),
+                                h('input', {
+                                    className: 'input flex-1',
+                                    placeholder: 'รายการตรวจสอบ',
+                                    value: item.name,
+                                    onChange: e => updateItem(idx, 'name', e.target.value)
+                                }),
+                                h('input', {
+                                    className: 'input w-32',
+                                    placeholder: 'หมวดหมู่',
+                                    value: item.category,
+                                    onChange: e => updateItem(idx, 'category', e.target.value)
+                                }),
+                                formData.items.length > 1 && h('button', {
+                                    className: 'btn btn-ghost btn-sm text-red-400 hover:text-red-300 mt-0.5 flex-shrink-0',
+                                    onClick: () => removeItem(idx)
+                                }, h('i', { className: 'fa-solid fa-trash-can' }))
+                            )
+                        )
+                    ),
+                    h('button', { className: 'btn btn-secondary btn-sm mt-3', onClick: addItem },
+                        h('i', { className: 'fa-solid fa-plus mr-1' }), 'เพิ่มรายการ'
+                    )
+                ),
+
+                // Save / Cancel
+                h('div', { className: 'flex justify-end gap-3 pt-4 border-t border-white/5' },
+                    h('button', { className: 'btn btn-secondary', onClick: resetForm }, 'ยกเลิก'),
+                    h('button', { className: 'btn btn-primary', onClick: handleSave },
+                        h('i', { className: 'fa-solid fa-save mr-1' }),
+                        editingTemplate ? 'อัปเดต' : 'บันทึก'
+                    )
+                )
+            )
+        );
+    }
+
+    // ---- TEMPLATE LIST VIEW ----
+    return h('div', { className: 'space-y-6 animate-fade-in' },
+        h('div', { className: 'flex items-center justify-between' },
+            h('div', { className: 'flex items-center gap-3' },
+                h('button', { className: 'btn btn-ghost btn-sm', onClick: onBack },
+                    h('i', { className: 'fa-solid fa-arrow-left' })
+                ),
+                h('h2', { className: 'text-lg font-semibold' }, 'จัดการเทมเพลตเช็คลิส')
+            ),
+            h('button', { className: 'btn btn-primary', onClick: () => setShowForm(true) },
+                h('i', { className: 'fa-solid fa-plus mr-1' }), 'สร้างใหม่'
+            )
+        ),
+
+        loading
+            ? h('div', { className: 'flex justify-center py-20' }, h('div', { className: 'loading-spinner' }))
+            : templates.length === 0
+                ? h('div', { className: 'text-center py-20 text-surface-500' },
+                    h('i', { className: 'fa-solid fa-clipboard-list text-4xl mb-4 block' }),
+                    h('p', null, 'ยังไม่มีเทมเพลตเช็คลิส'),
+                    h('button', { className: 'btn btn-primary mt-4', onClick: () => setShowForm(true) },
+                        h('i', { className: 'fa-solid fa-plus mr-1' }), 'สร้างเทมเพลตแรก'
+                    )
+                )
+                : h('div', { className: 'grid gap-4' },
+                    templates.map((tmpl, i) => {
+                        const typeInfo = getTypeInfo(tmpl.checklist_type);
+                        const items = Array.isArray(tmpl.items) ? tmpl.items : [];
+                        return h('div', { key: tmpl.id, className: 'card group hover:scale-[1.005] animate-slide-up', style: { animationDelay: (i * 50) + 'ms' } },
+                            h('div', { className: 'flex items-start justify-between' },
+                                h('div', { className: 'flex items-center gap-4' },
+                                    h('div', { className: `w-12 h-12 rounded-xl bg-gradient-to-br ${typeInfo.color} flex items-center justify-center flex-shrink-0` },
+                                        h('i', { className: `fa-solid ${typeInfo.icon} text-white text-lg` })
+                                    ),
+                                    h('div', null,
+                                        h('h3', { className: 'font-semibold text-white' }, tmpl.template_name),
+                                        h('div', { className: 'flex items-center gap-3 mt-1' },
+                                            h('span', { className: 'badge badge-primary' }, typeInfo.label),
+                                            h('span', { className: 'text-xs text-surface-500' }, items.length + ' รายการ')
+                                        )
+                                    )
+                                ),
+                                h('div', { className: 'flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity' },
+                                    h('button', { className: 'btn btn-ghost btn-sm', onClick: () => handleEdit(tmpl), title: 'แก้ไข' },
+                                        h('i', { className: 'fa-solid fa-pen text-primary-400' })
+                                    ),
+                                    h('button', { className: 'btn btn-ghost btn-sm', onClick: () => handleDelete(tmpl), title: 'ลบ' },
+                                        h('i', { className: 'fa-solid fa-trash-can text-red-400' })
+                                    )
+                                )
+                            ),
+                            items.length > 0 && h('div', { className: 'mt-4 pt-3 border-t border-white/5' },
+                                h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 gap-1' },
+                                    items.slice(0, 6).map((item, j) =>
+                                        h('div', { key: j, className: 'text-xs text-surface-400 flex items-center gap-2 py-1' },
+                                            h('i', { className: 'fa-solid fa-circle text-[4px] text-surface-600' }),
+                                            h('span', null, item.name),
+                                            item.category && h('span', { className: 'text-surface-600 ml-auto' }, item.category)
+                                        )
+                                    ),
+                                    items.length > 6 && h('div', { className: 'text-xs text-surface-600 py-1' }, '... อีก ' + (items.length - 6) + ' รายการ')
+                                )
+                            )
+                        );
+                    })
+                )
+    );
+}
+
+window.ChecklistTemplateManager = ChecklistTemplateManager;
+window.CHECKLIST_TYPES = CHECKLIST_TYPES;
