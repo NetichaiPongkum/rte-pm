@@ -40,8 +40,8 @@ function PMHistoryPage({ user, showToast }) {
 
     const filteredRecords = records.filter(r => {
         const matchesSearch = (r.mold_code || '').toLowerCase().includes(searchTerm.toLowerCase()) || 
-                              (r.template_name || '').toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesType = filterType === 'all' || r.checklist_type === filterType;
+                              (r.category_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesType = filterType === 'all' || r.pm_level === filterType;
         return matchesSearch && matchesType;
     });
 
@@ -103,21 +103,31 @@ function PMHistoryPage({ user, showToast }) {
                             : filteredRecords.length === 0
                                 ? h('tr', null, h('td', { colSpan: 7, className: 'text-center py-10 text-surface-500' }, 'ไม่พบข้อมูลรายการ PM'))
                                 : filteredRecords.map((r, i) => {
-                                    const typeInfo = getTypeInfo(r.checklist_type);
+                                    const typeInfo = getTypeInfo(r.pm_level);
+                                    const data = Array.isArray(r.checklist_data) ? r.checklist_data : [];
+                                    const counts = {
+                                        pass: data.filter(d => d.result === 'pass').length,
+                                        fail: data.filter(d => d.result === 'fail').length,
+                                        na:   data.filter(d => d.result === 'na').length
+                                    };
+
                                     return h('tr', { key: r.id, className: 'animate-slide-up', style: { animationDelay: (i * 30) + 'ms' } },
                                         h('td', null, h('span', { className: 'text-xs' }, r.performed_date || '-')),
                                         h('td', null, h('span', { className: 'font-bold text-primary-400' }, r.mold_code)),
                                         h('td', null, 
-                                            h('span', { className: 'badge badge-primary text-[10px]' }, typeInfo.label)
+                                            h('div', null,
+                                                h('p', { className: 'text-[10px] text-surface-400' }, r.category_name || '-'),
+                                                h('span', { className: 'badge badge-primary text-[10px] mt-1' }, typeInfo.label)
+                                            )
                                         ),
-                                        h('td', null, h('span', { className: 'text-xs' }, r.template_name)),
+                                        h('td', null, h('span', { className: 'text-xs' }, r.template_name || '-')),
                                         h('td', null, 
                                             h('div', { className: 'flex gap-1' },
-                                                h('span', { className: 'text-emerald-400 font-bold' }, r.pass_count || 0),
+                                                h('span', { className: 'text-emerald-400 font-bold' }, counts.pass),
                                                 h('span', { className: 'text-surface-600' }, '/'),
-                                                h('span', { className: 'text-red-400 font-bold' }, r.fail_count || 0),
+                                                h('span', { className: 'text-red-400 font-bold' }, counts.fail),
                                                 h('span', { className: 'text-surface-600' }, '/'),
-                                                h('span', { className: 'text-surface-400 font-bold' }, r.na_count || 0)
+                                                h('span', { className: 'text-surface-400 font-bold' }, counts.na)
                                             )
                                         ),
                                         h('td', null, h('span', { className: 'text-xs' }, r.performed_by)),

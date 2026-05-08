@@ -4,12 +4,13 @@
 
 function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSelectedMold }) {
     const h = React.createElement;
-    const [view, setView] = React.useState('select'); // select | fill | manage
+    const [view, setView] = React.useState('category'); // category | level | fill | manage
+    const [categories, setCategories] = React.useState([]);
     const [templates, setTemplates] = React.useState([]);
     const [molds, setMolds] = React.useState([]);
+    const [selectedCategory, setSelectedCategory] = React.useState(null);
     const [selectedTemplate, setSelectedTemplate] = React.useState(null);
     const [checklistData, setChecklistData] = React.useState({});
-    const [filterType, setFilterType] = React.useState('all');
     const [loading, setLoading] = React.useState(true);
     const [saving, setSaving] = React.useState(false);
     
@@ -31,12 +32,20 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
         setLoading(true);
         try {
             if (window.supabaseClient) {
-                // Load templates
-                const { data: tmplData } = await window.supabaseClient
-                    .from('pm_checklist_templates')
+                // Load categories
+                const { data: catData, error: catErr } = await window.supabaseClient
+                    .from('pm_categories')
                     .select('*')
-                    .eq('is_active', true)
-                    .order('checklist_type');
+                    .order('name');
+                if (catErr) throw catErr;
+                setCategories(catData || []);
+
+                // Load all active templates
+                const { data: tmplData, error: tmplErr } = await window.supabaseClient
+                    .from('pm_checklist_templates')
+                    .select('*, pm_categories(name)')
+                    .eq('is_active', true);
+                if (tmplErr) throw tmplErr;
                 setTemplates(tmplData || []);
 
                 // Load molds for auto-search
@@ -48,14 +57,20 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
                 setMolds(moldData || []);
             } else {
                 // Demo data
+                const demoCats = [
+                    { id: 'cat-1', name: 'PM Mold Plastic' },
+                    { id: 'cat-2', name: 'PM Die Casting' }
+                ];
+                setCategories(demoCats);
                 setTemplates([
-                    { id: 'demo-1', template_name: 'Mold Maintenance Type 1', checklist_type: 'type1', items: [{ name: 'ตรวจสอบสภาพผิวหน้าแม่พิมพ์', category: 'Visual' }, { name: 'ตรวจสอบระบบหล่อเย็น', category: 'Cooling' }] },
+                    { id: 'demo-1', template_name: 'Mold Maintenance Level 1', category_id: 'cat-1', pm_level: 1, items: [{ name: 'ตรวจสอบสภาพผิวหน้าแม่พิมพ์', category: 'Visual' }, { name: 'ตรวจสอบระบบหล่อเย็น', category: 'Cooling' }], pm_categories: { name: 'PM Mold Plastic' } },
                 ]);
                 setMolds([
                     { mold_code: '1700000145', mold_name: 'ELBOW', vendor: 'SPP', dwg_part1: 'AZ25B420' },
                 ]);
             }
         } catch (err) {
+            console.error('Load data error:', err);
             showToast('โหลดข้อมูลล้มเหลว', 'error');
         } finally {
             setLoading(false);
@@ -100,17 +115,14 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
 
             const record = {
                 template_id: selectedTemplate.id,
-                template_name: selectedTemplate.template_name,
-                checklist_type: selectedTemplate.checklist_type,
+                category_name: selectedCategory.name,
+                pm_level: selectedTemplate.pm_level,
                 mold_code: moldCode.trim(),
                 performed_by: user?.display_name || user?.username || 'Unknown',
                 performed_date: new Date().toISOString().split('T')[0],
                 checklist_data: results,
                 notes: notes.trim(),
                 status: 'completed',
-                pass_count: results.filter(r => r.result === 'pass').length,
-                fail_count: results.filter(r => r.result === 'fail').length,
-                na_count: results.filter(r => r.result === 'na').length,
             };
 
             if (window.supabaseClient) {
@@ -132,10 +144,10 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
         }
     };
 
-    const getTypeInfo = (id) => (window.CHECKLIST_TYPES || []).find(t => t.id === id) || { label: id, icon: 'fa-list', color: 'from-gray-500 to-gray-600' };
+    const getTypeInfo = (level) => (window.CHECKLIST_TYPES || []).find(t => t.id === level) || { label: 'Level ' + level, icon: 'fa-list', color: 'from-gray-500 to-gray-600' };
 
     if (view === 'manage') {
-        return h(window.ChecklistTemplateManager, { showToast, onBack: () => { setView('select'); loadData(); } });
+        return h(window.ChecklistTemplateManager, { showToast, onBack: () => { setView('category'); loadData(); } });
     }
 
     if (view === 'fill' && selectedTemplate) {
@@ -153,10 +165,11 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
 
         return h('div', { className: 'space-y-5 animate-fade-in max-w-4xl mx-auto' },
             h('div', { className: 'flex items-center gap-3' },
-                h('button', { className: 'btn btn-ghost btn-sm', onClick: () => setView('select') }, h('i', { className: 'fa-solid fa-arrow-left' })),
+                h('button', { className: 'btn btn-ghost btn-sm', onClick: () => setView('level') }, h('i', { className: 'fa-solid fa-arrow-left' })),
                 h('div', null,
+                    h('p', { className: 'text-xs text-surface-400' }, selectedCategory.name),
                     h('h2', { className: 'text-lg font-semibold text-white' }, selectedTemplate.template_name),
-                    h('span', { className: 'badge badge-primary text-xs' }, getTypeInfo(selectedTemplate.checklist_type).label)
+                    h('span', { className: 'badge badge-primary text-xs' }, getTypeInfo(selectedTemplate.pm_level).label)
                 )
             ),
 
@@ -236,37 +249,83 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
         );
     }
 
-    const filtered = templates.filter(t => filterType === 'all' || t.checklist_type === filterType);
-
-    return h('div', { className: 'space-y-6 animate-fade-in' },
-        h('div', { className: 'flex items-center justify-between flex-wrap gap-4' },
-            h('div', null,
-                h('h2', { className: 'text-xl font-bold text-white' }, 'PM Checklist'),
-                h('p', { className: 'text-sm text-surface-400' }, 'เลือกเทมเพลตเพื่อเริ่มบันทึกผลตรวจสอบ')
-            ),
-            isAdmin && h('button', { className: 'btn btn-secondary', onClick: () => setView('manage') }, h('i', { className: 'fa-solid fa-cog mr-2' }), 'จัดการเทมเพลต')
-        ),
-        h('div', { className: 'flex gap-2 overflow-x-auto pb-3' },
-            h('button', { className: `btn btn-sm px-4 ${filterType === 'all' ? 'btn-primary' : 'btn-ghost' }`, onClick: () => setFilterType('all') }, 'ทั้งหมด'),
-            ...(window.CHECKLIST_TYPES || []).map(type =>
-                h('button', { key: type.id, className: `btn btn-sm px-4 ${filterType === type.id ? 'btn-primary' : 'btn-ghost' }`, onClick: () => setFilterType(type.id) }, type.label)
-            )
-        ),
-        loading ? h('div', { className: 'text-center py-20' }, h('div', { className: 'loading-spinner mx-auto' }))
-        : h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' },
-            filtered.map(tmpl => h('div', { key: tmpl.id, className: 'card cursor-pointer hover:border-primary-500/30 hover:-translate-y-1 transition-all group overflow-hidden relative', onClick: () => startChecklist(tmpl) },
-                h('div', { className: 'absolute top-0 right-0 p-3 opacity-10' }, h('i', { className: `fa-solid ${getTypeInfo(tmpl.checklist_type).icon} text-4xl` })),
-                h('div', { className: 'flex items-center gap-4 mb-4' },
-                    h('div', { className: `w-12 h-12 rounded-xl bg-gradient-to-br ${getTypeInfo(tmpl.checklist_type).color} flex items-center justify-center text-white text-xl shadow-lg` }, h('i', { className: `fa-solid ${getTypeInfo(tmpl.checklist_type).icon}` })),
-                    h('div', null, h('h3', { className: 'font-bold text-white' }, tmpl.template_name), h('p', { className: 'text-xs text-surface-500' }, tmpl.items.length + ' รายการตรวจ'))
+    // ---- CATEGORY SELECTION VIEW ----
+    if (view === 'category') {
+        return h('div', { className: 'space-y-6 animate-fade-in' },
+            h('div', { className: 'flex items-center justify-between' },
+                h('div', null,
+                    h('h2', { className: 'text-xl font-bold text-white' }, 'PM Checklist'),
+                    h('p', { className: 'text-sm text-surface-400' }, 'เลือกหมวดหมู่ที่ต้องการทำ PM')
                 ),
-                h('div', { className: 'pt-3 border-t border-white/5 flex items-center justify-between' }, 
-                    h('span', { className: 'text-xs text-primary-400 font-bold' }, 'เริ่มทำรายการ'), 
-                    h('i', { className: 'fa-solid fa-chevron-right text-[10px] text-surface-600 group-hover:translate-x-1 transition-transform' })
+                isAdmin && h('button', { className: 'btn btn-secondary', onClick: () => setView('manage') }, h('i', { className: 'fa-solid fa-cog mr-2' }), 'จัดการเทมเพลต')
+            ),
+            loading ? h('div', { className: 'text-center py-20' }, h('div', { className: 'loading-spinner mx-auto' }))
+            : categories.length === 0 
+                ? h('div', { className: 'text-center py-20 text-surface-500' }, h('p', null, 'ยังไม่มีหมวดหมู่ PM'))
+                : h('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5' },
+                    categories.map(cat => h('div', {
+                        key: cat.id,
+                        className: 'card cursor-pointer hover:border-primary-500/30 hover:-translate-y-1 transition-all group p-6',
+                        onClick: () => { setSelectedCategory(cat); setView('level'); }
+                    },
+                        h('div', { className: 'w-14 h-14 rounded-2xl bg-primary-500/10 flex items-center justify-center mb-4 group-hover:bg-primary-500/20 transition-colors' },
+                            h('i', { className: 'fa-solid fa-toolbox text-2xl text-primary-400' })
+                        ),
+                        h('h3', { className: 'text-lg font-bold text-white mb-1' }, cat.name),
+                        h('p', { className: 'text-sm text-surface-500 mb-4' }, cat.description || 'การบำรุงรักษาอุปกรณ์ตามรอบ'),
+                        h('div', { className: 'pt-4 border-t border-white/5 flex items-center justify-between text-xs font-bold text-primary-400' },
+                            h('span', null, 'เลือกหมวดหมู่นี้'),
+                            h('i', { className: 'fa-solid fa-arrow-right' })
+                        )
+                    ))
                 )
-            ))
-        )
-    );
+        );
+    }
+
+    // ---- LEVEL SELECTION VIEW ----
+    if (view === 'level') {
+        const availableLevels = templates
+            .filter(t => t.category_id === selectedCategory?.id)
+            .sort((a, b) => a.pm_level - b.pm_level);
+
+        return h('div', { className: 'space-y-6 animate-fade-in' },
+            h('div', { className: 'flex items-center gap-3' },
+                h('button', { className: 'btn btn-ghost btn-sm', onClick: () => setView('category') }, h('i', { className: 'fa-solid fa-arrow-left' })),
+                h('div', null,
+                    h('h2', { className: 'text-xl font-bold text-white' }, selectedCategory?.name),
+                    h('p', { className: 'text-sm text-surface-400' }, 'เลือกระดับการตรวจสอบ (PM Level)')
+                )
+            ),
+            h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-5' },
+                availableLevels.length === 0
+                    ? h('div', { className: 'col-span-full text-center py-10 text-surface-500' }, 'ยังไม่มีเทมเพลตสำหรับหมวดหมู่นี้')
+                    : availableLevels.map(tmpl => {
+                        const typeInfo = getTypeInfo(tmpl.pm_level);
+                        return h('div', {
+                            key: tmpl.id,
+                            className: 'card cursor-pointer hover:border-primary-500/30 hover:-translate-y-1 transition-all group overflow-hidden relative',
+                            onClick: () => startChecklist(tmpl)
+                        },
+                            h('div', { className: 'absolute top-0 right-0 p-3 opacity-10' }, h('i', { className: `fa-solid ${typeInfo.icon} text-4xl` })),
+                            h('div', { className: 'flex items-center gap-4 mb-4' },
+                                h('div', { className: `w-12 h-12 rounded-xl bg-gradient-to-br ${typeInfo.color} flex items-center justify-center text-white text-xl shadow-lg` }, h('i', { className: `fa-solid ${typeInfo.icon}` })),
+                                h('div', null,
+                                    h('h3', { className: 'font-bold text-white' }, typeInfo.label),
+                                    h('p', { className: 'text-xs text-surface-500' }, tmpl.items.length + ' รายการตรวจ')
+                                )
+                            ),
+                            h('p', { className: 'text-xs text-surface-400 mb-4 min-h-[32px]' }, tmpl.template_name),
+                            h('div', { className: 'pt-3 border-t border-white/5 flex items-center justify-between text-xs font-bold text-primary-400' },
+                                h('span', null, 'เริ่มทำรายการ'),
+                                h('i', { className: 'fa-solid fa-chevron-right' })
+                            )
+                        );
+                    })
+            )
+        );
+    }
+
+    return null;
 }
 
 window.ChecklistPage = ChecklistPage;
