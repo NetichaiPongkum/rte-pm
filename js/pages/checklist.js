@@ -284,9 +284,17 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
 
     // ---- LEVEL SELECTION VIEW ----
     if (view === 'level') {
-        const availableLevels = templates
-            .filter(t => t.category_id === selectedCategory?.id)
-            .sort((a, b) => a.pm_level - b.pm_level);
+        const catTemplates = templates.filter(t => t.category_id === selectedCategory?.id);
+        
+        // Ensure exactly 3 levels
+        const levels = [1, 2, 3].map(lvl => {
+            const tmpl = catTemplates.find(t => t.pm_level === lvl);
+            return {
+                level: lvl,
+                template: tmpl,
+                typeInfo: getTypeInfo(lvl)
+            };
+        });
 
         return h('div', { className: 'space-y-6 animate-fade-in' },
             h('div', { className: 'flex items-center gap-3' },
@@ -297,30 +305,25 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
                 )
             ),
             h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-5' },
-                availableLevels.length === 0
-                    ? h('div', { className: 'col-span-full text-center py-10 text-surface-500' }, 'ยังไม่มีเทมเพลตสำหรับหมวดหมู่นี้')
-                    : availableLevels.map(tmpl => {
-                        const typeInfo = getTypeInfo(tmpl.pm_level);
-                        return h('div', {
-                            key: tmpl.id,
-                            className: 'card cursor-pointer hover:border-primary-500/30 hover:-translate-y-1 transition-all group overflow-hidden relative',
-                            onClick: () => startChecklist(tmpl)
-                        },
-                            h('div', { className: 'absolute top-0 right-0 p-3 opacity-10' }, h('i', { className: `fa-solid ${typeInfo.icon} text-4xl` })),
-                            h('div', { className: 'flex items-center gap-4 mb-4' },
-                                h('div', { className: `w-12 h-12 rounded-xl bg-gradient-to-br ${typeInfo.color} flex items-center justify-center text-white text-xl shadow-lg` }, h('i', { className: `fa-solid ${typeInfo.icon}` })),
-                                h('div', null,
-                                    h('h3', { className: 'font-bold text-white' }, typeInfo.label),
-                                    h('p', { className: 'text-xs text-surface-500' }, tmpl.items.length + ' รายการตรวจ')
-                                )
-                            ),
-                            h('p', { className: 'text-xs text-surface-400 mb-4 min-h-[32px]' }, tmpl.template_name),
-                            h('div', { className: 'pt-3 border-t border-white/5 flex items-center justify-between text-xs font-bold text-primary-400' },
-                                h('span', null, 'เริ่มทำรายการ'),
-                                h('i', { className: 'fa-solid fa-chevron-right' })
-                            )
-                        );
-                    })
+                levels.map(l => h('div', {
+                    key: l.level,
+                    className: `card ${l.template ? 'cursor-pointer hover:border-primary-500/30 hover:-translate-y-1' : 'opacity-50 cursor-not-allowed'} transition-all group overflow-hidden relative`,
+                    onClick: () => l.template && startChecklist(l.template)
+                },
+                    h('div', { className: 'absolute top-0 right-0 p-3 opacity-10' }, h('i', { className: `fa-solid ${l.typeInfo.icon} text-4xl` })),
+                    h('div', { className: 'flex items-center gap-4 mb-4' },
+                        h('div', { className: `w-12 h-12 rounded-xl bg-gradient-to-br ${l.typeInfo.color} flex items-center justify-center text-white text-xl shadow-lg` }, h('i', { className: `fa-solid ${l.typeInfo.icon}` })),
+                        h('div', null,
+                            h('h3', { className: 'font-bold text-white' }, l.typeInfo.label),
+                            h('p', { className: 'text-xs text-surface-500' }, l.template ? (l.template.items?.length || 0) + ' รายการตรวจ' : 'ยังไม่มีเทมเพลต')
+                        )
+                    ),
+                    h('p', { className: 'text-xs text-surface-400 mb-4 min-h-[32px]' }, l.template ? l.template.template_name : 'กรุณาแจ้ง Admin เพื่อกำหนดรายการตรวจสอบ'),
+                    h('div', { className: `pt-3 border-t border-white/5 flex items-center justify-between text-xs font-bold ${l.template ? 'text-primary-400' : 'text-surface-600'}` },
+                        h('span', null, l.template ? 'เริ่มทำรายการ' : 'ไม่พร้อมใช้งาน'),
+                        h('i', { className: `fa-solid ${l.template ? 'fa-chevron-right' : 'fa-lock'}` })
+                    )
+                ))
             )
         );
     }

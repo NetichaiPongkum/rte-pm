@@ -38,13 +38,23 @@ CREATE TABLE IF NOT EXISTS public.mold_master (
 );
 
 -- ==========================================
+-- PM CATEGORIES
+-- ==========================================
+CREATE TABLE IF NOT EXISTS public.pm_categories (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- ==========================================
 -- PM CHECKLIST TEMPLATES (Admin-managed)
 -- ==========================================
 CREATE TABLE IF NOT EXISTS public.pm_checklist_templates (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     template_name TEXT NOT NULL,
-    checklist_type TEXT NOT NULL DEFAULT 'type1',  -- type1, type2, type3
-    mold_type TEXT,
+    category_id UUID REFERENCES public.pm_categories(id),
+    pm_level INTEGER DEFAULT 1,     -- 1, 2, 3
     items JSONB NOT NULL DEFAULT '[]',  -- Array of { name, category }
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -201,8 +211,9 @@ CREATE TABLE IF NOT EXISTS public.external_links (
 -- ==========================================
 -- ENABLE REALTIME
 -- ==========================================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.users;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.mold_master;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pm_categories;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pm_checklist_templates;
+ALTER PUBLICATION supabase_realtime ADD TABLE public.pm_checklist_records;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.pm_records;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.parts_master;
 ALTER PUBLICATION supabase_realtime ADD TABLE public.issues_reports;
@@ -217,6 +228,7 @@ ALTER PUBLICATION supabase_realtime ADD TABLE public.external_links;
 -- เปิด RLS สำหรับทุกตาราง
 ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.mold_master ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pm_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pm_checklist_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pm_checklist_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parts_master ENABLE ROW LEVEL SECURITY;
@@ -228,6 +240,7 @@ ALTER TABLE public.external_links ENABLE ROW LEVEL SECURITY;
 -- Policy: Allow all for anon key (ปรับให้เข้มงวดขึ้นในภายหลัง)
 CREATE POLICY "Allow all access" ON public.users FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.mold_master FOR ALL USING (true);
+CREATE POLICY "Allow all access" ON public.pm_categories FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.pm_checklist_templates FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.pm_checklist_records FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.parts_master FOR ALL USING (true);

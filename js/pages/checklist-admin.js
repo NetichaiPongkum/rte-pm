@@ -31,6 +31,13 @@ function ChecklistTemplateManager({ showToast, onBack }) {
         loadData();
     }, []);
 
+    // Ensure category_id is set when categories load
+    React.useEffect(() => {
+        if (categories.length > 0 && !formData.category_id) {
+            setFormData(prev => ({ ...prev, category_id: categories[0].id }));
+        }
+    }, [categories]);
+
     const loadData = async () => {
         setLoading(true);
         try {
@@ -209,9 +216,10 @@ function ChecklistTemplateManager({ showToast, onBack }) {
                         h('label', { className: 'block text-sm font-medium text-surface-300 mb-1.5' }, 'หมวดหมู่'),
                         h('select', {
                             className: 'input',
-                            value: formData.category_id,
+                            value: formData.category_id || '',
                             onChange: e => setFormData(p => ({ ...p, category_id: e.target.value }))
                         },
+                            h('option', { value: '', disabled: true }, '-- เลือกหมวดหมู่ --'),
                             categories.map(cat => h('option', { key: cat.id, value: cat.id }, cat.name))
                         )
                     ),
