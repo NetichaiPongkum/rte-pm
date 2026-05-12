@@ -144,7 +144,7 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
         }
     };
 
-    const getTypeInfo = (level) => (window.CHECKLIST_TYPES || []).find(t => t.id === level) || { label: 'Level ' + level, icon: 'fa-list', color: 'from-gray-500 to-gray-600' };
+    const getTypeInfo = (level) => (window.CHECKLIST_TYPES || []).find(t => t.id === level) || { label: 'Level ' + level, icon: 'fa-list', color: 'bg-surface-700 text-surface-400' };
 
     if (view === 'manage') {
         return h(window.ChecklistTemplateManager, { showToast, onBack: () => { setView('category'); loadData(); } });
@@ -202,23 +202,23 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
                         ))
                     )
                 ),
-                moldCode && h('div', { className: 'p-4 rounded-xl bg-primary-500/5 border border-primary-500/20 grid grid-cols-3 gap-4 animate-fade-in' },
-                    h('div', null, h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold' }, 'Name'), h('p', { className: 'text-sm font-medium text-white truncate' }, moldInfo.name || '-')),
-                    h('div', null, h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold' }, 'DWG. Part 1'), h('p', { className: 'text-sm font-medium text-white truncate' }, moldInfo.dwg || '-')),
-                    h('div', null, h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold' }, 'Vendor'), h('p', { className: 'text-sm font-medium text-primary-400' }, moldInfo.vendor || '-'))
+                moldCode && h('div', { className: 'p-5 rounded-xl bg-primary-500/10 border border-primary-500/20 grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in' },
+                    h('div', null, 
+                        h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Mold Name / ชื่อแม่พิมพ์'), 
+                        h('p', { className: 'text-base font-bold text-white' }, moldInfo.name || '-')
+                    ),
+                    h('div', null, 
+                        h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'DWG. Part / แบบชิ้นงาน'), 
+                        h('p', { className: 'text-base font-bold text-white' }, moldInfo.dwg || '-')
+                    ),
+                    h('div', null, 
+                        h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Vendor / ผู้ผลิต'), 
+                        h('p', { className: 'text-base font-bold text-primary-400' }, moldInfo.vendor || '-')
+                    )
                 )
             ),
 
-            // PROGRESS
-            h('div', { className: 'card' },
-                h('div', { className: 'flex items-center justify-between mb-2' },
-                    h('span', { className: 'text-sm text-surface-300' }, 'ความคืบหน้า'),
-                    h('span', { className: 'text-sm font-semibold text-primary-400' }, filled + '/' + items.length + ' (' + percent + '%)')
-                ),
-                h('div', { className: 'h-2.5 rounded-full bg-white/5 overflow-hidden' },
-                    h('div', { className: 'h-full bg-gradient-to-r from-primary-600 to-primary-400 transition-all duration-500', style: { width: percent + '%' } })
-                )
-            ),
+
 
             // CHECKLIST ITEMS
             ...items.map((item, idx) => h('div', { key: idx, className: 'card flex items-center justify-between hover:bg-white/[0.02] transition-colors' },

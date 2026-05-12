@@ -3,9 +3,9 @@
 // ==========================================
 
 const CHECKLIST_TYPES = [
-    { id: 1,    label: 'Level 1',    icon: 'fa-1',  color: 'from-blue-500 to-cyan-500' },
-    { id: 2,    label: 'Level 2',    icon: 'fa-2',  color: 'from-amber-500 to-orange-500' },
-    { id: 3,    label: 'Level 3',    icon: 'fa-3',  color: 'from-emerald-500 to-green-500' },
+    { id: 1,    label: 'Level 1',    icon: 'fa-1',  color: 'bg-primary-500/10 text-primary-400' },
+    { id: 2,    label: 'Level 2',    icon: 'fa-2',  color: 'bg-amber-500/10 text-amber-400' },
+    { id: 3,    label: 'Level 3',    icon: 'fa-3',  color: 'bg-emerald-500/10 text-emerald-400' },
 ];
 
 // ==========================================
@@ -15,6 +15,10 @@ function ChecklistTemplateManager({ showToast, onBack }) {
     const h = React.createElement;
     const [categories, setCategories] = React.useState([]);
     const [showCategoryManager, setShowCategoryManager] = React.useState(false);
+    const [templates, setTemplates] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
+    const [showForm, setShowForm] = React.useState(false);
+    const [editingTemplate, setEditingTemplate] = React.useState(null);
     const [formData, setFormData] = React.useState({
         template_name: '',
         category_id: '',
@@ -316,13 +320,13 @@ function ChecklistTemplateManager({ showToast, onBack }) {
                 )
                 : h('div', { className: 'grid gap-4' },
                     templates.map((tmpl, i) => {
-                        const typeInfo = getTypeInfo(tmpl.checklist_type);
+                        const typeInfo = getTypeInfo(tmpl.pm_level);
                         const items = Array.isArray(tmpl.items) ? tmpl.items : [];
                         return h('div', { key: tmpl.id, className: 'card group hover:scale-[1.005] animate-slide-up', style: { animationDelay: (i * 50) + 'ms' } },
                             h('div', { className: 'flex items-start justify-between' },
                                 h('div', { className: 'flex items-center gap-4' },
-                                    h('div', { className: `w-12 h-12 rounded-xl bg-gradient-to-br ${typeInfo.color} flex items-center justify-center flex-shrink-0` },
-                                        h('i', { className: `fa-solid ${typeInfo.icon} text-white text-lg` })
+                                    h('div', { className: `w-12 h-12 rounded-xl ${typeInfo.color} flex items-center justify-center flex-shrink-0` },
+                                        h('i', { className: `fa-solid ${typeInfo.icon} text-sm ${typeInfo.color}` })
                                     ),
                                     h('div', null,
                                         h('h3', { className: 'font-semibold text-white' }, tmpl.template_name),
@@ -405,8 +409,8 @@ function CategoryManager({ categories, onClose, showToast }) {
         }
     };
 
-    return h('div', { className: 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-surface-950/80 backdrop-blur-sm animate-fade-in' },
-        h('div', { className: 'card-glass w-full max-w-md p-6' },
+    return h('div', { className: 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in' },
+        h('div', { className: 'card w-full max-w-md p-6' },
             h('div', { className: 'flex items-center justify-between mb-6' },
                 h('h3', { className: 'text-lg font-bold text-white' }, 'จัดการหมวดหมู่ PM'),
                 h('button', { className: 'text-surface-500 hover:text-white', onClick: onClose }, h('i', { className: 'fa-solid fa-xmark text-xl' }))

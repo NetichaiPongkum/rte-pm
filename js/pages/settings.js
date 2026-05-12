@@ -15,12 +15,31 @@ function SettingsPage({ user, showToast }) {
         role: 'operator',
         vendor_access: 'ALL'
     });
+    const [availableVendors, setAvailableVendors] = React.useState([]);
 
     const isAdmin = user && user.role === 'admin';
 
     React.useEffect(() => {
-        if (isAdmin) loadUsers();
+        if (isAdmin) {
+            loadUsers();
+            loadVendors();
+        }
     }, []);
+
+    const loadVendors = async () => {
+        try {
+            if (window.supabaseClient) {
+                const { data, error } = await window.supabaseClient.from('mold_master').select('vendor');
+                if (error) throw error;
+                const unique = [...new Set(data.map(m => m.vendor).filter(Boolean))].sort();
+                setAvailableVendors(unique);
+            } else {
+                setAvailableVendors(['SPP', 'RTE', 'MOLD-A', 'VENDOR-B']);
+            }
+        } catch (err) {
+            console.error('Load vendors error:', err);
+        }
+    };
 
     const loadUsers = async () => {
         setLoading(true);
@@ -186,14 +205,44 @@ function SettingsPage({ user, showToast }) {
                                 h('option', { value: 'operator' }, 'Operator')
                             )
                         ),
-                        h('div', null,
-                            h('label', { className: 'block text-xs font-medium text-surface-400 mb-1.5' }, 'สิทธิ์เข้าถึง Vendor'),
-                            h('input', { 
-                                className: 'input', 
-                                placeholder: 'เช่น SPP หรือ ALL', 
-                                value: formData.vendor_access, 
-                                onChange: e => setFormData({...formData, vendor_access: e.target.value}) 
-                            })
+                        h('div', { className: 'col-span-full' },
+                            h('label', { className: 'block text-xs font-medium text-surface-400 mb-2' }, 'สิทธิ์เข้าถึง Vendor (ติ๊กเลือก)'),
+                            h('div', { className: 'grid grid-cols-2 sm:grid-cols-3 gap-2 p-3 rounded-xl bg-surface-800/50 border border-white/5 max-h-40 overflow-y-auto' },
+                                // ALL option
+                                h('label', { className: 'flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors' },
+                                    h('input', { 
+                                        type: 'checkbox', 
+                                        className: 'checkbox checkbox-primary',
+                                        checked: formData.vendor_access === 'ALL',
+                                        onChange: () => setFormData({ ...formData, vendor_access: formData.vendor_access === 'ALL' ? '' : 'ALL' })
+                                    }),
+                                    h('span', { className: 'text-sm text-white font-bold' }, 'ALL ACCESS')
+                                ),
+                                // Specific vendors
+                                availableVendors.map(v => {
+                                    const selectedList = formData.vendor_access === 'ALL' ? [] : (formData.vendor_access || '').split(',').map(s => s.trim()).filter(Boolean);
+                                    const isChecked = formData.vendor_access === 'ALL' || selectedList.includes(v);
+                                    
+                                    return h('label', { key: v, className: 'flex items-center gap-2 p-2 rounded-lg hover:bg-white/5 cursor-pointer transition-colors' },
+                                        h('input', { 
+                                            type: 'checkbox', 
+                                            className: 'checkbox checkbox-info',
+                                            checked: isChecked,
+                                            disabled: formData.vendor_access === 'ALL',
+                                            onChange: () => {
+                                                let newList;
+                                                if (selectedList.includes(v)) {
+                                                    newList = selectedList.filter(s => s !== v);
+                                                } else {
+                                                    newList = [...selectedList, v];
+                                                }
+                                                setFormData({ ...formData, vendor_access: newList.join(',') });
+                                            }
+                                        }),
+                                        h('span', { className: 'text-sm text-surface-200' }, v)
+                                    );
+                                })
+                            )
                         )
                     )
                 ),

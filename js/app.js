@@ -229,24 +229,22 @@ function ToastContainer({ toasts }) {
 function HomePage({ user, showToast, setCurrentPage }) {
     const h = React.createElement;
     const stats = [
-        { label: 'แม่พิมพ์ทั้งหมด', value: '—', icon: 'fa-cubes',    color: 'from-blue-500 to-blue-700' },
-        { label: 'PM รอดำเนินการ',  value: '—', icon: 'fa-clock',    color: 'from-amber-500 to-orange-600' },
-        { label: 'ปัญหาที่เปิดอยู่',  value: '—', icon: 'fa-bug',      color: 'from-red-500 to-rose-600' },
-        { label: 'เสร็จสิ้นเดือนนี้',  value: '—', icon: 'fa-check',    color: 'from-emerald-500 to-green-600' },
+        { label: 'แม่พิมพ์ทั้งหมด', value: '—', icon: 'fa-cubes',    color: 'bg-primary-500/10 text-primary-400' },
+        { label: 'PM รอดำเนินการ',  value: '—', icon: 'fa-clock',    color: 'bg-amber-500/10 text-amber-400' },
+        { label: 'ปัญหาที่เปิดอยู่',  value: '—', icon: 'fa-bug',      color: 'bg-red-500/10 text-red-400' },
+        { label: 'เสร็จสิ้นเดือนนี้',  value: '—', icon: 'fa-check',    color: 'bg-emerald-500/10 text-emerald-400' },
     ];
 
     return h('div', { className: 'space-y-6 animate-fade-in' },
         // Welcome Banner
-        h('div', { className: 'card-glass p-8 relative overflow-hidden' },
-            h('div', { className: 'absolute -top-20 -right-20 w-60 h-60 bg-primary-500/10 rounded-full blur-3xl' }),
-            h('div', { className: 'absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl' }),
+        h('div', { className: 'card p-8 bg-surface-800/50 border-white/5 relative overflow-hidden' },
             h('div', { className: 'relative z-10' },
                 h('h1', { className: 'text-2xl font-bold text-white mb-2' },
                     'สวัสดี, ',
-                    h('span', { className: 'text-gradient' }, user?.display_name || user?.username || 'User')
+                    h('span', { className: 'text-primary-400' }, user?.display_name || user?.username || 'User')
                 ),
-                h('p', { className: 'text-surface-300 max-w-xl' },
-                    'ระบบ Preventive Maintenance สำหรับการติดตาม วางแผน และรายงานสถานะการบำร蝓รักษาแม่พิมพ์'
+                h('p', { className: 'text-surface-400 max-w-xl' },
+                    'ระบบ Preventive Maintenance สำหรับการติดตาม วางแผน และรายงานสถานะการบำรุงรักษาแม่พิมพ์'
                 )
             )
         ),
@@ -254,15 +252,15 @@ function HomePage({ user, showToast, setCurrentPage }) {
         // Stats Grid
         h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
             stats.map((stat, i) =>
-                h('div', { key: i, className: `card hover:scale-[1.02] stagger-${i + 1} animate-slide-up` },
+                h('div', { key: i, className: `card stagger-${i + 1} animate-slide-up hover:border-surface-600` },
                     h('div', { className: 'flex items-center justify-between mb-3' },
-                        h('span', { className: 'text-xs text-surface-400 font-medium' }, stat.label),
-                        h('div', { className: `w-9 h-9 rounded-lg bg-gradient-to-br ${stat.color} flex items-center justify-center` },
-                            h('i', { className: `fa-solid ${stat.icon} text-white text-sm` })
+                        h('span', { className: 'text-xs text-surface-500 font-semibold uppercase tracking-wider' }, stat.label),
+                        h('div', { className: `w-9 h-9 rounded-md ${stat.color} flex items-center justify-center` },
+                            h('i', { className: `fa-solid ${stat.icon} text-sm` })
                         )
                     ),
                     h('p', { className: 'text-2xl font-bold text-white' }, stat.value),
-                    h('p', { className: 'text-xs text-surface-500 mt-1' }, 'เชื่อมต่อ Supabase เพื่อดูข้อมูล')
+                    h('p', { className: 'text-[10px] text-surface-600 mt-1 uppercase' }, 'No data connected')
                 )
             )
         ),
