@@ -15,6 +15,7 @@ function PartsPage({ user, showToast }) {
         mold_code: '',
         mold_name: '',
         dwg_part1: '',
+        part_name: '',
         vendor: '',
         machine_no: '',
         cavity: '',
@@ -36,7 +37,8 @@ function PartsPage({ user, showToast }) {
                 
                 // Filter by vendor if not ALL
                 if (vendorAccess !== 'ALL') {
-                    query = query.eq('vendor', vendorAccess);
+                    const vendors = vendorAccess.split(',').map(v => v.trim()).filter(v => v);
+                    query = query.in('vendor', vendors);
                 }
                 
                 const { data, error } = await query.order('mold_code');
@@ -45,7 +47,8 @@ function PartsPage({ user, showToast }) {
             } else {
                 let list = JSON.parse(localStorage.getItem('demo_molds') || '[]');
                 if (vendorAccess !== 'ALL') {
-                    list = list.filter(m => m.vendor === vendorAccess);
+                    const vendors = vendorAccess.split(',').map(v => v.trim()).filter(v => v);
+                    list = list.filter(m => vendors.includes(m.vendor));
                 }
                 setMolds(list);
             }
@@ -112,8 +115,9 @@ function PartsPage({ user, showToast }) {
                 const data = results.data.map(row => ({
                     mold_code: row['ASSET1'] || row['mold_code'] || row['Asset Mold'],
                     mold_name: row['NAME MOLD'] || row['mold_name'] || row['Name'],
-                    dwg_part1: row['DWG PART 1'] || row['dwg_part1'] || row['DWG.'],
-                    vendor: row['VENDER INJ'] || row['vendor'] || row['Vendor'] || 'SPP',
+                    dwg_part1: row['DWG PART'] || row['DWG PART 1'] || row['dwg_part1'] || row['DWG.'],
+                    part_name: row['PART NAME'] || row['part_name'] || '',
+                    vendor: row['VENDOR'] || row['VENDER INJ'] || row['vendor'] || row['Vendor'] || 'SPP',
                     machine_no: row['M/C (TON)'] || row['machine_no'] || '',
                     cavity: parseInt(row['CAV'] || row['cavity'] || '0'),
                     mold_type: row['MOLD TYPE'] || '2-plate'
@@ -155,7 +159,7 @@ function PartsPage({ user, showToast }) {
             setFormData({ ...mold });
             setEditingId(mold.id);
         } else {
-            setFormData({ mold_code: '', mold_name: '', dwg_part1: '', vendor: '', machine_no: '', cavity: '', mold_type: '2-plate' });
+            setFormData({ mold_code: '', mold_name: '', dwg_part1: '', part_name: '', vendor: '', machine_no: '', cavity: '', mold_type: '2-plate' });
             setEditingId(null);
         }
         setShowModal(true);
@@ -176,7 +180,7 @@ function PartsPage({ user, showToast }) {
     return h('div', { className: 'space-y-6 animate-fade-in' },
         h('div', { className: 'flex items-center justify-between flex-wrap gap-4' },
             h('div', null,
-                h('h2', { className: 'text-lg font-semibold text-white' }, 'ฐานข้อมูลแม่พิมพ์ (Part Master)'),
+                h('h2', { className: 'text-lg font-semibold text-white' }, 'ฐานข้อมูลแม่พิมพ์ (PM database)'),
                 h('p', { className: 'text-sm text-surface-400' }, vendorAccess === 'ALL' ? 'จัดการรายการแม่พิมพ์ทั้งหมด' : `รายการแม่พิมพ์ของ: ${vendorAccess}`)
             ),
             isAdmin && h('div', { className: 'flex gap-3' },
@@ -212,9 +216,9 @@ function PartsPage({ user, showToast }) {
                         h('tr', null,
                             h('th', null, 'ASSET1'),
                             h('th', null, 'NAME MOLD'),
-                            h('th', null, 'DWG PART 1'),
+                            h('th', null, 'DWG PART'),
+                            h('th', null, 'PART NAME'),
                             h('th', null, 'VENDOR'),
-                            h('th', null, 'CAV'),
                             isAdmin && h('th', { className: 'text-right' }, 'จัดการ')
                         )
                     ),
@@ -226,8 +230,8 @@ function PartsPage({ user, showToast }) {
                                 h('td', { className: 'font-bold text-primary-400' }, m.mold_code),
                                 h('td', null, m.mold_name || '-'),
                                 h('td', null, h('span', { className: 'text-xs px-2 py-0.5 rounded-lg bg-white/5 border border-white/10' }, m.dwg_part1 || '-')),
+                                h('td', null, m.part_name || '-'),
                                 h('td', null, h('span', { className: 'text-xs' }, m.vendor || '-')),
-                                h('td', null, m.cavity || '-'),
                                 isAdmin && h('td', { className: 'text-right' },
                                     h('div', { className: 'flex justify-end gap-2' },
                                         h('button', { className: 'btn btn-ghost btn-sm text-primary-400 hover:bg-primary-500/10', onClick: () => openModal(m) }, h('i', { className: 'fa-solid fa-edit' })),
@@ -258,8 +262,12 @@ function PartsPage({ user, showToast }) {
                         h('input', { className: 'input', value: formData.mold_name, onChange: e => setFormData({...formData, mold_name: e.target.value}) })
                     ),
                     h('div', { className: 'col-span-2' },
-                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'DWG PART 1'),
+                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'DWG PART'),
                         h('input', { className: 'input', value: formData.dwg_part1, onChange: e => setFormData({...formData, dwg_part1: e.target.value}) })
+                    ),
+                    h('div', { className: 'col-span-2' },
+                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'PART NAME'),
+                        h('input', { className: 'input', value: formData.part_name, onChange: e => setFormData({...formData, part_name: e.target.value}) })
                     ),
                     h('div', null,
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'VENDOR'),

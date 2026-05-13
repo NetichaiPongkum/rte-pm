@@ -51,7 +51,8 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
                 // Load molds for auto-search
                 let query = window.supabaseClient.from('mold_master').select('mold_code, mold_name, vendor, dwg_part1');
                 if (vendorAccess !== 'ALL') {
-                    query = query.eq('vendor', vendorAccess);
+                    const vendors = vendorAccess.split(',').map(v => v.trim()).filter(v => v);
+                    query = query.in('vendor', vendors);
                 }
                 const { data: moldData } = await query;
                 setMolds(moldData || []);
@@ -115,6 +116,7 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
 
             const record = {
                 template_id: selectedTemplate.id,
+                template_name: selectedTemplate.template_name,
                 category_name: selectedCategory.name,
                 pm_level: selectedTemplate.pm_level,
                 mold_code: moldCode.trim(),

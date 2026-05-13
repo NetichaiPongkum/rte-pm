@@ -6,8 +6,8 @@ import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js
 // ==========================================
 // ⚠️ CONFIGURATION - อัพเดต URL และ Key ของคุณที่นี่
 // ==========================================
-const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // เช่น https://xxxxx.supabase.co
-const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // Public anon key
+const SUPABASE_URL = 'https://upydkbryufpdonhvchon.supabase.co';       // เช่น https://xxxxx.supabase.co
+const SUPABASE_ANON_KEY = 'sb_publishable_AkPqLVUyfwpO6UnI86JMgg_VEIVSE5k'; // Public anon key
 
 // สร้าง Supabase client
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);

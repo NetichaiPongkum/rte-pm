@@ -27,8 +27,9 @@ CREATE TABLE IF NOT EXISTS public.mold_master (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mold_code TEXT UNIQUE NOT NULL,    -- ASSET1
     mold_name TEXT,                   -- NAME MOLD
-    dwg_part1 TEXT,                   -- DWG PART 1
-    vendor TEXT,                      -- VENDER INJ
+    dwg_part1 TEXT,                   -- DWG PART
+    part_name TEXT,                   -- PART NAME
+    vendor TEXT,                      -- VENDOR
     machine_no TEXT,
     cavity INTEGER,
     mold_type TEXT,
@@ -68,6 +69,8 @@ CREATE TABLE IF NOT EXISTS public.pm_checklist_records (
     template_id UUID REFERENCES public.pm_checklist_templates(id),
     template_name TEXT,
     checklist_type TEXT,
+    category_name TEXT,
+    pm_level INTEGER,
     mold_code TEXT NOT NULL,
     performed_by TEXT,
     performed_date DATE,
@@ -88,7 +91,7 @@ CREATE TABLE IF NOT EXISTS public.pm_records (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     mold_id UUID REFERENCES public.mold_master(id),
     mold_code TEXT,
-    template_id UUID REFERENCES public.pm_templates(id),
+    template_id UUID REFERENCES public.pm_checklist_templates(id),
     performed_by TEXT,
     performed_date DATE,
     shot_count NUMERIC,
@@ -231,6 +234,7 @@ ALTER TABLE public.mold_master ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pm_categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pm_checklist_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.pm_checklist_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pm_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.parts_master ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.issues_reports ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.waste_reports ENABLE ROW LEVEL SECURITY;
@@ -243,6 +247,7 @@ CREATE POLICY "Allow all access" ON public.mold_master FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.pm_categories FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.pm_checklist_templates FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.pm_checklist_records FOR ALL USING (true);
+CREATE POLICY "Allow all access" ON public.pm_records FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.parts_master FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.issues_reports FOR ALL USING (true);
 CREATE POLICY "Allow all access" ON public.waste_reports FOR ALL USING (true);

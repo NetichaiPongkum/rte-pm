@@ -9,31 +9,139 @@ function PMHistoryPage({ user, showToast }) {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [filterType, setFilterType] = React.useState('all');
     const [selectedRecord, setSelectedRecord] = React.useState(null);
+    const [editingRecord, setEditingRecord] = React.useState(null);
+    const [editFormData, setEditFormData] = React.useState(null);
+    const [filterYear, setFilterYear] = React.useState(new Date().getFullYear().toString());
+    const vendorAccess = user?.vendor_access || 'ALL';
+
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = currentYear; y >= 2023; y--) years.push(y.toString());
 
     React.useEffect(() => {
         loadRecords();
-    }, []);
+    }, [vendorAccess, filterYear]);
 
     const loadRecords = async () => {
         setLoading(true);
         try {
             if (window.supabaseClient) {
-                const { data, error } = await window.supabaseClient
-                    .from('pm_checklist_records')
-                    .select('*')
-                    .order('created_at', { ascending: false });
+                let accessibleMoldCodes = null;
+                if (vendorAccess !== 'ALL') {
+                    const vendors = vendorAccess.split(',').map(v => v.trim()).filter(v => v);
+                    const { data: moldData } = await window.supabaseClient
+                        .from('mold_master')
+                        .select('mold_code')
+                        .in('vendor', vendors);
+                    accessibleMoldCodes = (moldData || []).map(m => m.mold_code);
+                }
+
+                let query = window.supabaseClient.from('pm_checklist_records').select('*');
+                
+                if (filterYear !== 'all') {
+                    query = query.gte('performed_date', `${filterYear}-01-01`).lte('performed_date', `${filterYear}-12-31`);
+                }
+                
+                // We do NOT filter by mold_code yet so we can compute correct sequence numbers for ALL records
+                const { data: allData, error } = await query.order('created_at', { ascending: true });
                 if (error) throw error;
-                setRecords(data || []);
+                
+                // Fetch mold info for enrichment
+                const { data: allMolds } = await window.supabaseClient.from('mold_master').select('mold_code, mold_name, dwg_part1, part_name');
+                const moldsMap = {};
+                (allMolds || []).forEach(m => moldsMap[m.mold_code] = m);
+
+                // Compute doc_no
+                const dateCounters = {};
+                let enrichedRecords = (allData || []).map(r => {
+                    const dateStr = (r.performed_date || r.created_at.split('T')[0]).replace(/-/g, '');
+                    if (!dateCounters[dateStr]) dateCounters[dateStr] = 1;
+                    else dateCounters[dateStr]++;
+                    
+                    const seq = String(dateCounters[dateStr]).padStart(4, '0');
+                    return {
+                        ...r,
+                        doc_no: `RTE-PM-${dateStr}-${seq}`,
+                        mold_name: moldsMap[r.mold_code]?.mold_name || '-',
+                        dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
+                        part_name: moldsMap[r.mold_code]?.part_name || '-',
+                    };
+                });
+
+                // NOW filter by accessibleMoldCodes if necessary
+                if (accessibleMoldCodes) {
+                    if (accessibleMoldCodes.length === 0) {
+                        setRecords([]);
+                        setLoading(false);
+                        return;
+                    }
+                    enrichedRecords = enrichedRecords.filter(r => accessibleMoldCodes.includes(r.mold_code));
+                }
+
+                // Reverse to show newest first
+                setRecords(enrichedRecords.reverse());
             } else {
                 // Load from localStorage for demo mode
-                const demoRecords = JSON.parse(localStorage.getItem('demo_pm_records') || '[]');
-                setRecords(demoRecords);
+                let demoRecords = JSON.parse(localStorage.getItem('demo_pm_records') || '[]');
+                let demoMolds = JSON.parse(localStorage.getItem('demo_molds') || '[]');
+                const moldsMap = {};
+                demoMolds.forEach(m => moldsMap[m.mold_code] = m);
+                
+                demoRecords.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+                
+                const dateCounters = {};
+                const enrichedRecords = demoRecords.map(r => {
+                    const dateStr = (r.performed_date || new Date().toISOString().split('T')[0]).replace(/-/g, '');
+                    if (!dateCounters[dateStr]) dateCounters[dateStr] = 1;
+                    else dateCounters[dateStr]++;
+                    
+                    return {
+                        ...r,
+                        doc_no: `RTE-PM-${dateStr}-${String(dateCounters[dateStr]).padStart(4, '0')}`,
+                        mold_name: moldsMap[r.mold_code]?.mold_name || '-',
+                        dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
+                        part_name: moldsMap[r.mold_code]?.part_name || '-',
+                    };
+                });
+                setRecords(enrichedRecords.reverse());
             }
         } catch (err) {
             console.error('Load records error:', err);
             showToast('โหลดข้อมูลประวัติล้มเหลว', 'error');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleSaveEdit = async () => {
+        try {
+            if (!window.supabaseClient) {
+                // LocalStorage demo mode
+                let demoRecords = JSON.parse(localStorage.getItem('demo_pm_records') || '[]');
+                const idx = demoRecords.findIndex(r => r.id === editingRecord.id);
+                if (idx > -1) {
+                    demoRecords[idx] = { ...editFormData };
+                    localStorage.setItem('demo_pm_records', JSON.stringify(demoRecords));
+                }
+            } else {
+                const { error } = await window.supabaseClient
+                    .from('pm_checklist_records')
+                    .update({
+                        performed_by: editFormData.performed_by,
+                        performed_date: editFormData.performed_date,
+                        notes: editFormData.notes,
+                        checklist_data: editFormData.checklist_data
+                    })
+                    .eq('id', editingRecord.id);
+                if (error) throw error;
+            }
+            
+            showToast('บันทึกการแก้ไขสำเร็จ', 'success');
+            setEditingRecord(null);
+            loadRecords();
+        } catch (err) {
+            console.error('Save edit error:', err);
+            showToast('บันทึกไม่สำเร็จ', 'error');
         }
     };
 
@@ -46,121 +154,111 @@ function PMHistoryPage({ user, showToast }) {
         return matchesSearch && matchesType;
     });
 
-    const exportCheckSheet = (record) => {
+    // Removed exportCheckSheet to only use downloadPDF
+
+    const downloadPDF = (record) => {
+        if (!window.html2pdf) {
+            showToast('กำลังโหลดไลบรารี PDF กรุณารอสักครู่', 'warning');
+            return;
+        }
+
         const data = Array.isArray(record.checklist_data) ? record.checklist_data : [];
         const typeInfo = getTypeInfo(record.pm_level);
         
-        const printWindow = window.open('', '_blank');
-        const html = `
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>PM Check Sheet - ${record.mold_code}</title>
-                <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&family=Noto+Sans+Thai:wght@400;700&display=swap" rel="stylesheet">
-                <style>
-                    @page { size: A4; margin: 10mm; }
-                    body { font-family: 'Inter', 'Noto Sans Thai', sans-serif; padding: 0; color: #1a1a1a; line-height: 1.3; font-size: 11px; margin: 0; }
-                    .header { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #333; padding-bottom: 10px; margin-bottom: 15px; }
-                    .header-title h1 { margin: 0; font-size: 18px; color: #000; font-weight: 800; }
-                    .header-title p { margin: 2px 0 0; color: #666; font-size: 11px; }
-                    .info-grid { display: grid; grid-template-cols: 1.2fr 1fr; gap: 15px; margin-bottom: 15px; background: #fcfcfc; padding: 10px; border: 1px solid #eee; border-radius: 4px; }
-                    .info-item { display: flex; margin-bottom: 4px; }
-                    .info-label { font-weight: bold; width: 120px; color: #555; }
-                    .info-value { color: #000; flex: 1; border-bottom: 1px dotted #ccc; }
-                    table { width: 100%; border-collapse: collapse; margin-bottom: 15px; table-layout: fixed; }
-                    th { background: #f0f0f0; text-align: left; padding: 8px; border: 1px solid #333; font-size: 11px; }
-                    td { padding: 6px 8px; border: 1px solid #333; font-size: 11px; word-wrap: break-word; }
-                    .result-badge { font-weight: bold; text-transform: uppercase; padding: 1px 6px; border: 1px solid #333; font-size: 9px; display: inline-block; }
-                    .result-pass { background: #d1fae5 !important; }
-                    .result-fail { background: #fee2e2 !important; }
-                    .notes-section { margin-top: 10px; padding: 8px; border: 1px solid #333; min-height: 50px; }
-                    .notes-title { font-weight: bold; margin-bottom: 4px; }
-                    .footer { margin-top: 30px; display: grid; grid-template-cols: 1fr 1fr; gap: 40px; }
-                    .sign-box { border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 11px; }
-                    @media print {
-                        .no-print { display: none; }
-                        body { -webkit-print-color-adjust: exact; }
-                    }
-                </style>
-            </head>
-            <body>
-                <div class="header">
-                    <div class="header-title">
-                        <h1>PREVENTIVE MAINTENANCE CHECK SHEET</h1>
-                        <p>ระบบจัดการงานบำรุงรักษาแม่พิมพ์ (PM Mold RTE)</p>
+        const container = document.createElement('div');
+        container.style.position = 'absolute';
+        container.style.left = '-9999px';
+        container.style.top = '0';
+        container.innerHTML = `
+            <div id="pdf-content" style="padding: 30px 40px; font-family: 'Inter', 'Noto Sans Thai', sans-serif; color: #1a1a1a; font-size: 10px; width: 794px; height: 1122px; box-sizing: border-box; background: white; position: relative; overflow: hidden;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #333; padding-bottom: 8px; margin-bottom: 10px;">
+                    <div>
+                        <h1 style="margin: 0; font-size: 16px; color: #000; font-weight: 800;">PREVENTIVE MAINTENANCE CHECK SHEET</h1>
+                        <p style="margin: 2px 0 0; color: #666; font-size: 10px;">ระบบจัดการงานบำรุงรักษาแม่พิมพ์ (PM Mold RTE)</p>
                     </div>
                     <div style="text-align: right">
-                        <div style="font-weight: bold; color: #4f46e5; font-size: 14px;">${typeInfo.label || 'PM Level ' + (record.pm_level || '-')}</div>
-                        <div style="font-size: 10px; color: #666;">DOC NO: PM-RTE-${(record.id || Date.now()).toString().slice(-6).toUpperCase()}</div>
+                        <div style="font-weight: bold; color: #4f46e5; font-size: 12px;">${typeInfo.label || 'PM Level ' + (record.pm_level || '-')}</div>
+                        <div style="font-size: 9px; color: #666;">DOC NO: ${record.doc_no || '-'}</div>
                     </div>
                 </div>
 
-                <div class="info-grid">
-                    <div>
-                        <div class="info-item"><span class="info-label">Mold Code / รหัส:</span> <span class="info-value" style="font-weight: 700;">${record.mold_code || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">Category / หมวดหมู่:</span> <span class="info-value">${record.category_name || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">Performed By / ผู้ตรวจ:</span> <span class="info-value">${record.performed_by || '-'}</span></div>
+                <div style="display: flex; gap: 15px; margin-bottom: 10px; background: #fcfcfc; padding: 8px; border: 1px solid #eee; border-radius: 4px;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Mold Code:</span> <span style="font-weight: 700; flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.mold_code || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Mold Name:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.mold_name || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Part Name:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.part_name || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">DWG Part:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.dwg_part1 || '-'}</span></div>
                     </div>
-                    <div>
-                        <div class="info-item"><span class="info-label">Date / วันที่:</span> <span class="info-value">${record.performed_date || '-'}</span></div>
-                        <div class="info-item"><span class="info-label">Status / สถานะ:</span> <span class="info-value">Completed / เสร็จสิ้น</span></div>
+                    <div style="flex: 1;">
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Category:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.category_name || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Performed By:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.performed_by || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Date:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.performed_date || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Status:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">Completed / เสร็จสิ้น</span></div>
                     </div>
                 </div>
 
-                <table>
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 10px; table-layout: fixed;">
                     <thead>
                         <tr>
-                            <th style="width: 30px">No.</th>
-                            <th style="width: 90px">Category</th>
-                            <th>Inspection Item / รายการตรวจสอบ</th>
-                            <th style="width: 70px; text-align: center;">Result</th>
+                            <th style="width: 30px; background: #f0f0f0; text-align: left; padding: 4px 6px; border: 1px solid #333; font-size: 10px;">No.</th>
+                            <th style="width: 90px; background: #f0f0f0; text-align: left; padding: 4px 6px; border: 1px solid #333; font-size: 10px;">Category</th>
+                            <th style="background: #f0f0f0; text-align: left; padding: 4px 6px; border: 1px solid #333; font-size: 10px;">Inspection Item / รายการตรวจสอบ</th>
+                            <th style="width: 60px; text-align: center; background: #f0f0f0; padding: 4px 6px; border: 1px solid #333; font-size: 10px;">Result</th>
                         </tr>
                     </thead>
                     <tbody>
                         ${data.map((item, idx) => `
                             <tr>
-                                <td style="text-align: center;">${idx + 1}</td>
-                                <td style="color: #666; font-size: 10px;">${item.category || '-'}</td>
-                                <td>${item.name}</td>
-                                <td style="text-align: center;">
-                                    <span class="result-badge result-${item.result || 'na'}">${item.result || 'N/A'}</span>
+                                <td style="text-align: center; padding: 3px 6px; border: 1px solid #333; font-size: 10px;">${idx + 1}</td>
+                                <td style="color: #666; font-size: 9px; padding: 3px 6px; border: 1px solid #333;">${item.category || '-'}</td>
+                                <td style="padding: 3px 6px; border: 1px solid #333; font-size: 10px;">${item.name}</td>
+                                <td style="text-align: center; padding: 3px 6px; border: 1px solid #333; font-size: 10px;">
+                                    <span style="font-weight: bold; text-transform: uppercase; padding: 1px 4px; border: 1px solid #333; font-size: 8px; display: inline-block; background: ${item.result === 'pass' ? '#d1fae5' : item.result === 'fail' ? '#fee2e2' : '#f3f4f6'};">${item.result || 'N/A'}</span>
                                 </td>
                             </tr>
                         `).join('')}
                     </tbody>
                 </table>
 
-                <div class="notes-section">
-                    <div class="notes-title">Additional Notes / หมายเหตุเพิ่มเติม:</div>
-                    <div>${record.notes || '-'}</div>
+                <div style="margin-top: 5px; padding: 6px; border: 1px solid #333; min-height: 40px;">
+                    <div style="font-weight: bold; margin-bottom: 2px;">Additional Notes / หมายเหตุเพิ่มเติม:</div>
+                    <div style="font-size: 9px;">${record.notes || '-'}</div>
                 </div>
 
-                <div class="footer">
-                    <div class="sign-box">
-                        <p style="margin-bottom: 35px;">Performed By (ผู้ตรวจสอบ)</p>
+                <div style="position: absolute; bottom: 40px; left: 40px; right: 40px; display: flex; justify-content: space-between; gap: 40px;">
+                    <div style="flex: 1; border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 10px;">
+                        <p style="margin-bottom: 25px;">Performed By (ผู้ตรวจสอบ)</p>
                         <p>${record.performed_by}</p>
-                        <p style="font-size: 9px; color: #666;">Date: ${record.performed_date}</p>
+                        <p style="font-size: 8px; color: #666;">Date: ${record.performed_date}</p>
                     </div>
-                    <div class="sign-box">
-                        <p style="margin-bottom: 35px;">Approved By (ผู้อนุมัติ)</p>
+                    <div style="flex: 1; border-top: 1px solid #000; text-align: center; padding-top: 5px; font-size: 10px;">
+                        <p style="margin-bottom: 25px;">Approved By (ผู้อนุมัติ)</p>
                         <p style="color: #ccc;">__________________________</p>
-                        <p style="font-size: 9px; color: #666;">Date: ____/____/____</p>
+                        <p style="font-size: 8px; color: #666;">Date: ____/____/____</p>
                     </div>
                 </div>
-
-                <div class="no-print" style="position: fixed; bottom: 20px; left: 0; right: 0; text-align: center;">
-                    <button onclick="window.print()" style="padding: 10px 40px; background: #4f46e5; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; box-shadow: 0 4px 14px rgba(79, 70, 229, 0.4);">Print to PDF (A4)</button>
-                </div>
-                <script>
-                    // Auto open print dialog
-                    window.onload = () => { setTimeout(() => { /* window.print(); */ }, 500); };
-                </script>
-            </body>
-            </html>
+            </div>
         `;
-        
-        printWindow.document.write(html);
-        printWindow.document.close();
+        document.body.appendChild(container);
+
+        const element = document.getElementById('pdf-content');
+        const opt = {
+            margin:       0,
+            filename:     `PM_Record_${record.mold_code}_${record.performed_date}.pdf`,
+            image:        { type: 'jpeg', quality: 1 },
+            html2canvas:  { scale: 2, useCORS: true },
+            jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+
+        const oldText = showToast('กำลังประมวลผล PDF...', 'info');
+        window.html2pdf().set(opt).from(element).save().then(() => {
+            document.body.removeChild(container);
+            showToast('ดาวน์โหลด PDF สำเร็จ', 'success');
+        }).catch(err => {
+            console.error('PDF error', err);
+            document.body.removeChild(container);
+            showToast('ดาวน์โหลด PDF ล้มเหลว', 'error');
+        });
     };
 
     const exportToExcel = () => {
@@ -232,14 +330,24 @@ function PMHistoryPage({ user, showToast }) {
 
         // Filters
         h('div', { className: 'card flex flex-col md:flex-row gap-4 items-center justify-between' },
-            h('div', { className: 'relative w-full md:w-64' },
-                h('i', { className: 'fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm' }),
-                h('input', {
-                    className: 'input pl-10',
-                    placeholder: 'ค้นหารหัสแม่พิมพ์...',
-                    value: searchTerm,
-                    onChange: e => setSearchTerm(e.target.value)
-                })
+            h('div', { className: 'flex gap-3 w-full md:w-auto' },
+                h('div', { className: 'relative w-full md:w-64' },
+                    h('i', { className: 'fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm' }),
+                    h('input', {
+                        className: 'input pl-10 w-full',
+                        placeholder: 'ค้นหารหัสแม่พิมพ์...',
+                        value: searchTerm,
+                        onChange: e => setSearchTerm(e.target.value)
+                    })
+                ),
+                h('select', {
+                    className: 'input bg-surface-800 text-sm py-1.5 w-32 cursor-pointer border border-white/10 text-white',
+                    value: filterYear,
+                    onChange: e => setFilterYear(e.target.value)
+                },
+                    years.map(y => h('option', { key: y, value: y }, y)),
+                    h('option', { value: 'all' }, 'ทุกปี')
+                )
             ),
             h('div', { className: 'flex gap-2 w-full md:w-auto overflow-x-auto' },
                 h('button', {
@@ -264,6 +372,7 @@ function PMHistoryPage({ user, showToast }) {
                         h('tr', null,
                             h('th', null, 'วันที่'),
                             h('th', null, 'รหัสแม่พิมพ์'),
+                            h('th', null, 'ชื่อแม่พิมพ์'),
                             h('th', null, 'ประเภท'),
                             h('th', null, 'รายการตรวจสอบ'),
                             h('th', null, 'ผลลัพธ์ (P/F/NA)'),
@@ -296,6 +405,12 @@ function PMHistoryPage({ user, showToast }) {
                                         h('td', null, h('span', { className: 'font-bold text-primary-400' }, r.mold_code)),
                                         h('td', null, 
                                             h('div', null,
+                                                h('p', { className: 'text-xs text-white' }, r.mold_name || '-'),
+                                                h('p', { className: 'text-[10px] text-surface-400' }, r.part_name && r.part_name !== '-' ? r.part_name : '')
+                                            )
+                                        ),
+                                        h('td', null, 
+                                            h('div', null,
                                                 h('p', { className: 'text-[10px] text-surface-400' }, r.category_name || '-'),
                                                 h('span', { className: 'badge badge-primary text-[10px] mt-1' }, typeInfo.label)
                                             )
@@ -316,16 +431,24 @@ function PMHistoryPage({ user, showToast }) {
                                         ),
                                         h('td', { className: 'text-right' },
                                             h('div', { className: 'flex justify-end gap-1', onClick: e => e.stopPropagation() },
+                                                user?.role === 'admin' && h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-amber-400 hover:bg-amber-500/10',
+                                                    title: 'Edit Record',
+                                                    onClick: () => {
+                                                        setEditingRecord(r);
+                                                        setEditFormData(JSON.parse(JSON.stringify(r)));
+                                                    }
+                                                }, h('i', { className: 'fa-solid fa-pen-to-square' })),
                                                 h('button', { 
                                                     className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-primary-500/10',
                                                     title: 'View Details',
                                                     onClick: () => setSelectedRecord(r)
                                                 }, h('i', { className: 'fa-solid fa-eye' })),
                                                 h('button', { 
-                                                    className: 'btn btn-ghost btn-xs text-surface-400 hover:bg-white/10',
-                                                    title: 'Print Check Sheet',
-                                                    onClick: () => exportCheckSheet(r)
-                                                }, h('i', { className: 'fa-solid fa-print' }))
+                                                    className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-white/10',
+                                                    title: 'Download PDF',
+                                                    onClick: () => downloadPDF(r)
+                                                }, h('i', { className: 'fa-solid fa-file-pdf' }))
                                             )
                                         )
                                     );
@@ -339,10 +462,10 @@ function PMHistoryPage({ user, showToast }) {
         selectedRecord && h('div', { className: 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in' },
             h('div', { className: 'card w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-white/10' },
                 // Modal Header
-                h('div', { className: 'p-6 border-b border-white/5 flex justify-between items-center bg-surface-800' },
+                h('div', { className: 'flex justify-between items-start p-6 border-b border-white/5 bg-surface-800' },
                     h('div', null,
                         h('h3', { className: 'text-lg font-bold text-white' }, 'รายละเอียดการตรวจสอบ (PM Details)'),
-                        h('p', { className: 'text-xs text-surface-400' }, `ID: ${selectedRecord.id.toString().slice(-8).toUpperCase()}`)
+                        h('p', { className: 'text-sm text-surface-400 mt-1 font-mono' }, `DOC NO: ${selectedRecord.doc_no || selectedRecord.id.slice(-8).toUpperCase()}`)
                     ),
                     h('button', { className: 'btn btn-ghost btn-sm', onClick: () => setSelectedRecord(null) }, h('i', { className: 'fa-solid fa-times' }))
                 ),
@@ -355,6 +478,14 @@ function PMHistoryPage({ user, showToast }) {
                             h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Mold Code'),
                             h('p', { className: 'text-sm font-bold text-primary-400' }, selectedRecord.mold_code)
                         ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5 md:col-span-2' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Mold Name / ชื่อแม่พิมพ์'),
+                            h('p', { className: 'text-sm font-bold text-white' }, selectedRecord.mold_name)
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'DWG / Part Name'),
+                            h('p', { className: 'text-xs font-bold text-white' }, `${selectedRecord.dwg_part1} / ${selectedRecord.part_name}`)
+                        ),
                         h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
                             h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Date'),
                             h('p', { className: 'text-sm font-bold text-white' }, selectedRecord.performed_date)
@@ -366,6 +497,10 @@ function PMHistoryPage({ user, showToast }) {
                         h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
                             h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Level'),
                             h('span', { className: 'badge badge-primary text-[10px]' }, getTypeInfo(selectedRecord.pm_level).label)
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Category'),
+                            h('p', { className: 'text-xs font-bold text-white truncate' }, selectedRecord.category_name)
                         )
                     ),
 
@@ -406,17 +541,121 @@ function PMHistoryPage({ user, showToast }) {
                 // Modal Footer (Actions)
                 h('div', { className: 'p-6 border-t border-white/5 bg-surface-800 flex flex-wrap gap-3 justify-end' },
                     h('button', { 
-                        className: 'btn btn-secondary',
-                        onClick: () => exportCheckSheet(selectedRecord)
-                    }, h('i', { className: 'fa-solid fa-eye mr-2' }), 'ดูเป็น PDF'),
-                    h('button', { 
                         className: 'btn btn-primary',
-                        onClick: () => exportCheckSheet(selectedRecord)
+                        onClick: () => downloadPDF(selectedRecord)
                     }, h('i', { className: 'fa-solid fa-file-pdf mr-2' }), 'Export PDF'),
                     h('button', { 
                         className: 'btn bg-emerald-600 hover:bg-emerald-500 text-white',
                         onClick: () => exportRecordToExcel(selectedRecord)
-                    }, h('i', { className: 'fa-solid fa-file-excel mr-2' }), 'Download Excel')
+                    }, h('i', { className: 'fa-solid fa-file-excel mr-2' }), 'Download Excel'),
+                    h('button', { 
+                        className: 'btn btn-ghost',
+                        onClick: () => setSelectedRecord(null)
+                    }, 'ปิดหน้าต่าง')
+                )
+            )
+        ),
+
+        // Edit Record Modal
+        editingRecord && editFormData && h('div', { className: 'fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in' },
+            h('div', { className: 'card w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-amber-500/30' },
+                // Header
+                h('div', { className: 'flex justify-between items-start p-6 border-b border-white/5 bg-surface-800' },
+                    h('div', null,
+                        h('h3', { className: 'text-lg font-bold text-amber-400' }, 'แก้ไขข้อมูลการตรวจสอบ (Edit PM Record)'),
+                        h('p', { className: 'text-sm text-surface-400 mt-1 font-mono' }, `DOC NO: ${editFormData.doc_no || editFormData.id.slice(-8).toUpperCase()}`)
+                    ),
+                    h('button', { className: 'btn btn-ghost btn-sm', onClick: () => setEditingRecord(null) }, h('i', { className: 'fa-solid fa-times' }))
+                ),
+                
+                // Content
+                h('div', { className: 'flex-1 overflow-y-auto p-6 space-y-6' },
+                    h('div', { className: 'grid grid-cols-2 gap-4' },
+                        h('div', null,
+                            h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'วันที่ (Date)'),
+                            h('input', {
+                                type: 'date',
+                                className: 'input w-full',
+                                value: editFormData.performed_date,
+                                onChange: e => setEditFormData({ ...editFormData, performed_date: e.target.value })
+                            })
+                        ),
+                        h('div', null,
+                            h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'ผู้ตรวจสอบ (Performed By)'),
+                            h('input', {
+                                type: 'text',
+                                className: 'input w-full',
+                                value: editFormData.performed_by,
+                                onChange: e => setEditFormData({ ...editFormData, performed_by: e.target.value })
+                            })
+                        )
+                    ),
+                    
+                    // Checklist Items
+                    h('div', { className: 'card p-0 overflow-hidden border border-white/5' },
+                        h('table', { className: 'data-table' },
+                            h('thead', null,
+                                h('tr', null,
+                                    h('th', { className: 'w-16 text-center' }, 'No.'),
+                                    h('th', null, 'Category'),
+                                    h('th', null, 'Inspection Item'),
+                                    h('th', { className: 'text-center w-48' }, 'Result')
+                                )
+                            ),
+                            h('tbody', null,
+                                (Array.isArray(editFormData.checklist_data) ? editFormData.checklist_data : []).map((item, idx) =>
+                                    h('tr', { key: idx },
+                                        h('td', { className: 'text-center text-surface-500' }, idx + 1),
+                                        h('td', { className: 'text-surface-400 text-xs' }, item.category || '-'),
+                                        h('td', { className: 'text-sm text-white whitespace-normal' }, item.name),
+                                        h('td', null,
+                                            h('div', { className: 'flex justify-center gap-2' },
+                                                ['pass', 'fail', 'na'].map(status =>
+                                                    h('button', {
+                                                        key: status,
+                                                        className: `px-3 py-1 rounded-md text-xs font-bold transition-colors ${
+                                                            item.result === status
+                                                                ? (status === 'pass' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/50'
+                                                                 : status === 'fail' ? 'bg-red-500/20 text-red-400 border border-red-500/50'
+                                                                 : 'bg-surface-600 text-white border border-surface-500')
+                                                                : 'bg-surface-800 text-surface-500 hover:bg-surface-700 border border-transparent'
+                                                        }`,
+                                                        onClick: () => {
+                                                            const newData = [...editFormData.checklist_data];
+                                                            newData[idx].result = status;
+                                                            setEditFormData({ ...editFormData, checklist_data: newData });
+                                                        }
+                                                    }, status.toUpperCase())
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    ),
+
+                    // Notes
+                    h('div', null,
+                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'หมายเหตุ (Notes)'),
+                        h('textarea', {
+                            className: 'input w-full min-h-[100px]',
+                            value: editFormData.notes || '',
+                            onChange: e => setEditFormData({ ...editFormData, notes: e.target.value })
+                        })
+                    )
+                ),
+
+                // Footer
+                h('div', { className: 'p-6 border-t border-white/5 bg-surface-800 flex justify-end gap-3' },
+                    h('button', { 
+                        className: 'btn btn-ghost', 
+                        onClick: () => setEditingRecord(null) 
+                    }, 'ยกเลิก'),
+                    h('button', { 
+                        className: 'btn btn-primary bg-amber-600 hover:bg-amber-500 text-white border-none', 
+                        onClick: handleSaveEdit 
+                    }, h('i', { className: 'fa-solid fa-save mr-2' }), 'บันทึกการแก้ไข')
                 )
             )
         )

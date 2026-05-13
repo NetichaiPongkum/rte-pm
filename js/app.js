@@ -11,7 +11,8 @@ function App() {
     const [currentPage, setCurrentPage] = useState('home');
     const [user, setUser] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [sidebarOpen, setSidebarOpen] = useState(window.innerWidth >= 768);
     const [toasts, setToasts] = useState([]);
     const [appData, setAppData] = useState({
         selectedMold: null
@@ -51,6 +52,15 @@ function App() {
             }
         };
         init();
+
+        const handleResize = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            if (mobile) setSidebarOpen(false);
+            else setSidebarOpen(true);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
     }, []);
 
     const handleLogin = (userData) => {
@@ -68,7 +78,7 @@ function App() {
     // Navigation items filtered by role
     const allNavItems = [
         { id: 'home',       icon: 'fa-house',       label: 'หน้าหลัก' },
-        { id: 'parts',      icon: 'fa-database',    label: 'Part Master' },
+        { id: 'parts',      icon: 'fa-database',    label: 'PM database' },
         { id: 'pm',         icon: 'fa-clipboard-check', label: 'PM Checklist' },
         { id: 'pm-history', icon: 'fa-rectangle-list',   label: 'รายการ PM' },
         { id: 'settings',   icon: 'fa-user-gear',   label: 'จัดการผู้ใช้', adminOnly: true },
@@ -124,11 +134,17 @@ function App() {
     const isAdmin = user.role === 'admin';
     const initials = (user.display_name || user.username || 'U').substring(0, 2).toUpperCase();
 
-    return h('div', { className: 'flex min-h-screen' },
+    return h('div', { className: 'flex min-h-screen relative' },
+        // Mobile Overlay
+        isMobile && sidebarOpen && h('div', { 
+            className: 'fixed inset-0 bg-black/60 z-40 backdrop-blur-sm transition-opacity', 
+            onClick: () => setSidebarOpen(false) 
+        }),
+
         // Sidebar
         h('aside', {
-            className: 'sidebar',
-            style: { width: sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)' }
+            className: `sidebar ${isMobile ? 'fixed z-50 h-full transition-transform duration-300 shadow-2xl' : 'transition-all duration-300'} ${isMobile && !sidebarOpen ? '-translate-x-full' : 'translate-x-0'}`,
+            style: { width: isMobile ? '280px' : (sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)') }
         },
             // Logo
             h('div', { className: 'p-5 border-b border-white/5' },
@@ -136,7 +152,7 @@ function App() {
                     h('div', {
                         className: 'w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-lg shadow-lg flex-shrink-0'
                     }, 'PM'),
-                    sidebarOpen && h('div', null,
+                    (sidebarOpen || isMobile) && h('div', null,
                         h('h1', { className: 'text-sm font-bold text-white' }, 'PM Mold RTE'),
                         h('p', { className: 'text-xs text-surface-400' }, 'Management System')
                     )
@@ -149,21 +165,24 @@ function App() {
                     h('div', {
                         key: item.id,
                         className: `sidebar-item ${currentPage === item.id ? 'active' : ''}`,
-                        onClick: () => setCurrentPage(item.id),
+                        onClick: () => {
+                            setCurrentPage(item.id);
+                            if (isMobile) setSidebarOpen(false);
+                        },
                     },
                         h('i', { className: `fa-solid ${item.icon} w-5 text-center` }),
-                        sidebarOpen && h('span', null, item.label)
+                        (sidebarOpen || isMobile) && h('span', null, item.label)
                     )
                 )
             ),
 
             // User info + Logout
             h('div', { className: 'p-3 border-t border-white/5 space-y-1' },
-                h('div', { className: 'sidebar-item', onClick: () => setSidebarOpen(!sidebarOpen) },
+                !isMobile && h('div', { className: 'sidebar-item', onClick: () => setSidebarOpen(!sidebarOpen) },
                     h('i', { className: `fa-solid ${sidebarOpen ? 'fa-chevron-left' : 'fa-chevron-right'} w-5 text-center` }),
                     sidebarOpen && h('span', null, 'ย่อเมนู')
                 ),
-                sidebarOpen && h('div', { className: 'p-3 rounded-xl bg-white/[0.03] mt-2' },
+                (sidebarOpen || isMobile) && h('div', { className: 'p-3 rounded-xl bg-white/[0.03] mt-2' },
                     h('div', { className: 'flex items-center gap-3' },
                         h('div', { className: 'w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0' }, initials),
                         h('div', { className: 'min-w-0' },
@@ -174,20 +193,26 @@ function App() {
                 ),
                 h('div', { className: 'sidebar-item text-red-400 hover:text-red-300', onClick: handleLogout },
                     h('i', { className: 'fa-solid fa-right-from-bracket w-5 text-center' }),
-                    sidebarOpen && h('span', null, 'ออกจากระบบ')
+                    (sidebarOpen || isMobile) && h('span', null, 'ออกจากระบบ')
                 )
             )
         ),
 
         // Main Content
         h('main', {
-            className: 'flex-1 transition-all duration-300',
-            style: { marginLeft: sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)' }
+            className: 'flex-1 transition-all duration-300 min-w-0 flex flex-col h-screen overflow-hidden',
+            style: { marginLeft: isMobile ? 0 : (sidebarOpen ? 'var(--sidebar-width)' : 'var(--sidebar-collapsed-width)') }
         },
             // Header
-            h('header', { className: 'glass sticky top-0 z-40 px-6 py-4 flex items-center justify-between' },
-                h('h2', { className: 'text-lg font-semibold text-white' },
-                    navItems.find(n => n.id === currentPage)?.label || 'หน้าหลัก'
+            h('header', { className: 'glass sticky top-0 z-30 px-4 md:px-6 py-4 flex items-center justify-between' },
+                h('div', { className: 'flex items-center gap-3 min-w-0' },
+                    isMobile && h('button', { 
+                        className: 'btn btn-ghost btn-sm -ml-2 text-surface-400', 
+                        onClick: () => setSidebarOpen(true) 
+                    }, h('i', { className: 'fa-solid fa-bars text-lg' })),
+                    h('h2', { className: 'text-lg font-semibold text-white truncate' },
+                        navItems.find(n => n.id === currentPage)?.label || 'หน้าหลัก'
+                    )
                 ),
                 h('div', { className: 'flex items-center gap-3' },
                     h('button', { className: 'btn btn-ghost btn-sm' },
