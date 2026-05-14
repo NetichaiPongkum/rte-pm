@@ -78,7 +78,7 @@ function LoginPage({ onLogin, showToast }) {
 
     const h = React.createElement;
 
-    return h('div', { className: 'min-h-screen flex items-center justify-center relative overflow-hidden bg-surface-900' },
+    return h('div', { className: 'min-h-screen flex items-center justify-center relative overflow-y-auto bg-surface-900' },
         // Background effects
         h('div', { className: 'absolute inset-0 pointer-events-none' },
             h('div', { className: 'absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full blur-[120px]' }),

@@ -79,15 +79,23 @@ function App() {
     const allNavItems = [
         { id: 'home',       icon: 'fa-house',       label: 'หน้าหลัก' },
         { id: 'parts',      icon: 'fa-database',    label: 'PM database' },
-        { id: 'pm',         icon: 'fa-clipboard-check', label: 'PM Checklist' },
-        { id: 'pm-history', icon: 'fa-rectangle-list',   label: 'รายการ PM' },
+        { id: 'pm',         icon: 'fa-clipboard-check', label: 'PM checklist', req: 'pm' },
+        { id: 'pm-history', icon: 'fa-rectangle-list',   label: 'PM summary', req: 'pm' },
+        { id: 'inspection', icon: 'fa-magnifying-glass-chart', label: 'Inspection mold', req: 'inspection' },
+        { id: 'inspection-history', icon: 'fa-file-signature', label: 'Inspection summary', req: 'inspection' },
+        { id: 'dashboard',  icon: 'fa-chart-line',   label: 'แดชบอร์ด', req: 'dashboard' },
         { id: 'settings',   icon: 'fa-user-gear',   label: 'จัดการผู้ใช้', adminOnly: true },
-        { id: 'dashboard',  icon: 'fa-chart-line',   label: 'แดชบอร์ด' },
         { id: 'issues',     icon: 'fa-triangle-exclamation', label: 'แจ้งปัญหา' },
         { id: 'reports',    icon: 'fa-file-lines',   label: 'รายงาน' },
     ];
 
-    const navItems = allNavItems.filter(item => !item.adminOnly || (user && user.role === 'admin'));
+    const navItems = allNavItems.filter(item => {
+        if (item.adminOnly && (!user || user.role !== 'admin')) return false;
+        if (item.req === 'pm' && user && user.can_access_pm === false) return false;
+        if (item.req === 'inspection' && user && user.can_access_inspection === false) return false;
+        if (item.req === 'dashboard' && user && user.can_access_dashboard === false) return false;
+        return true;
+    });
 
     // Render page content
     const renderPage = () => {
@@ -96,7 +104,9 @@ function App() {
                 case 'home':       return h(HomePage, { user, showToast, setCurrentPage });
                 case 'parts':      return window.PartsPage ? h(window.PartsPage, { user, showToast, setCurrentPage, setAppData }) : h(ComponentLoading, { name: 'PartsPage' });
                 case 'pm':         return window.ChecklistPage ? h(window.ChecklistPage, { user, showToast, setCurrentPage, selectedMold: appData.selectedMold, clearSelectedMold: () => setAppData(p => ({ ...p, selectedMold: null })) }) : h(ComponentLoading, { name: 'ChecklistPage' });
+                case 'inspection': return window.InspectionPage ? h(window.InspectionPage, { user, showToast, setCurrentPage, selectedMold: appData.selectedMold, clearSelectedMold: () => setAppData(p => ({ ...p, selectedMold: null })) }) : h(ComponentLoading, { name: 'InspectionPage' });
                 case 'pm-history': return window.PMHistoryPage ? h(window.PMHistoryPage, { user, showToast }) : h(ComponentLoading, { name: 'PMHistoryPage' });
+                case 'inspection-history': return window.InspectionHistoryPage ? h(window.InspectionHistoryPage, { user, showToast }) : h(ComponentLoading, { name: 'InspectionHistoryPage' });
                 case 'settings':   return window.SettingsPage ? h(window.SettingsPage, { user, showToast }) : h(ComponentLoading, { name: 'SettingsPage' });
                 case 'dashboard':  return h(PlaceholderPage, { title: 'แดชบอร์ด', icon: 'fa-chart-line' });
                 case 'issues':     return h(PlaceholderPage, { title: 'แจ้งปัญหา', icon: 'fa-triangle-exclamation' });
@@ -221,7 +231,7 @@ function App() {
                     h('div', { className: 'w-8 h-8 rounded-full bg-gradient-to-br from-primary-400 to-primary-600 flex items-center justify-center text-xs font-bold text-white' }, initials)
                 )
             ),
-            h('div', { className: 'p-6 page-enter' }, renderPage())
+            h('div', { className: 'flex-1 overflow-y-auto p-6 page-enter' }, renderPage())
         ),
 
         // Toasts
@@ -299,9 +309,15 @@ function HomePage({ user, showToast, setCurrentPage }) {
             h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-3' },
                 [
                     { icon: 'fa-cubes',           title: 'ฐานข้อมูลแม่พิมพ์', desc: 'ค้นหาและเลือกแม่พิมพ์',       page: 'parts' },
-                    { icon: 'fa-clipboard-check', title: 'เริ่มตรวจ PM',   desc: 'เลือกเทมเพลตและเริ่มตรวจเช็ค', page: 'pm' },
-                    { icon: 'fa-rectangle-list',   title: 'รายการ PM',      desc: 'ดูประวัติการตรวจสอบทั้งหมด',     page: 'pm-history' },
-                ].map((action, i) =>
+                    { icon: 'fa-clipboard-check', title: 'PM checklist',   desc: 'เลือกเทมเพลตและเริ่มตรวจเช็ค', page: 'pm', req: 'pm' },
+                    { icon: 'fa-rectangle-list',   title: 'PM summary',      desc: 'ดูประวัติการตรวจสอบทั้งหมด',     page: 'pm-history', req: 'pm' },
+                    { icon: 'fa-magnifying-glass-chart', title: 'Inspection mold', desc: 'ลงบันทึกการตรวจสอบชิ้นงาน/แม่พิมพ์', page: 'inspection', req: 'inspection' },
+                    { icon: 'fa-file-signature', title: 'Inspection summary', desc: 'สรุปผลการตรวจสอบชิ้นงาน',     page: 'inspection-history', req: 'inspection' },
+                ].filter(action => {
+                    if (action.req === 'pm' && user && user.can_access_pm === false) return false;
+                    if (action.req === 'inspection' && user && user.can_access_inspection === false) return false;
+                    return true;
+                }).map((action, i) =>
                     h('div', {
                         key: i,
                         className: 'p-4 rounded-xl bg-white/[0.03] border border-white/5 hover:border-primary-500/30 transition-all cursor-pointer group',

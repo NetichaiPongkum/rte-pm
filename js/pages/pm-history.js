@@ -11,16 +11,32 @@ function PMHistoryPage({ user, showToast }) {
     const [selectedRecord, setSelectedRecord] = React.useState(null);
     const [editingRecord, setEditingRecord] = React.useState(null);
     const [editFormData, setEditFormData] = React.useState(null);
-    const [filterYear, setFilterYear] = React.useState(new Date().getFullYear().toString());
+    const [startDate, setStartDate] = React.useState('');
+    const [endDate, setEndDate] = React.useState('');
+    const [filterVendor, setFilterVendor] = React.useState('all');
+    const [availableVendors, setAvailableVendors] = React.useState([]);
     const vendorAccess = user?.vendor_access || 'ALL';
 
-    const currentYear = new Date().getFullYear();
-    const years = [];
-    for (let y = currentYear; y >= 2023; y--) years.push(y.toString());
+    React.useEffect(() => {
+        const fetchVendors = async () => {
+            if (window.supabaseClient && vendorAccess === 'ALL') {
+                const { data } = await window.supabaseClient.from('mold_master').select('vendor');
+                if (data) {
+                    const unique = [...new Set(data.map(m => m.vendor).filter(Boolean))].sort();
+                    setAvailableVendors(unique);
+                }
+            } else if (vendorAccess !== 'ALL') {
+                setAvailableVendors(vendorAccess.split(',').map(v => v.trim()).filter(Boolean));
+            } else {
+                setAvailableVendors(['SPP', 'RTE', 'MOLD-A', 'VENDOR-B']);
+            }
+        };
+        fetchVendors();
+    }, [vendorAccess]);
 
     React.useEffect(() => {
         loadRecords();
-    }, [vendorAccess, filterYear]);
+    }, [vendorAccess, startDate, endDate, filterVendor]);
 
     const loadRecords = async () => {
         setLoading(true);
@@ -38,8 +54,11 @@ function PMHistoryPage({ user, showToast }) {
 
                 let query = window.supabaseClient.from('pm_checklist_records').select('*');
                 
-                if (filterYear !== 'all') {
-                    query = query.gte('performed_date', `${filterYear}-01-01`).lte('performed_date', `${filterYear}-12-31`);
+                if (startDate) {
+                    query = query.gte('performed_date', startDate);
+                }
+                if (endDate) {
+                    query = query.lte('performed_date', endDate);
                 }
                 
                 // We do NOT filter by mold_code yet so we can compute correct sequence numbers for ALL records
@@ -47,7 +66,7 @@ function PMHistoryPage({ user, showToast }) {
                 if (error) throw error;
                 
                 // Fetch mold info for enrichment
-                const { data: allMolds } = await window.supabaseClient.from('mold_master').select('mold_code, mold_name, dwg_part1, part_name');
+                const { data: allMolds } = await window.supabaseClient.from('mold_master').select('mold_code, mold_name, dwg_part1, part_name, vendor');
                 const moldsMap = {};
                 (allMolds || []).forEach(m => moldsMap[m.mold_code] = m);
 
@@ -65,8 +84,13 @@ function PMHistoryPage({ user, showToast }) {
                         mold_name: moldsMap[r.mold_code]?.mold_name || '-',
                         dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
                         part_name: moldsMap[r.mold_code]?.part_name || '-',
+                        vendor: moldsMap[r.mold_code]?.vendor || '-',
                     };
                 });
+
+                if (filterVendor !== 'all') {
+                    enrichedRecords = enrichedRecords.filter(r => r.vendor === filterVendor);
+                }
 
                 // NOW filter by accessibleMoldCodes if necessary
                 if (accessibleMoldCodes) {
@@ -101,9 +125,16 @@ function PMHistoryPage({ user, showToast }) {
                         mold_name: moldsMap[r.mold_code]?.mold_name || '-',
                         dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
                         part_name: moldsMap[r.mold_code]?.part_name || '-',
+                        vendor: moldsMap[r.mold_code]?.vendor || '-',
                     };
                 });
-                setRecords(enrichedRecords.reverse());
+                
+                let filteredEnriched = enrichedRecords;
+                if (startDate) filteredEnriched = filteredEnriched.filter(r => r.performed_date >= startDate);
+                if (endDate) filteredEnriched = filteredEnriched.filter(r => r.performed_date <= endDate);
+                if (filterVendor !== 'all') filteredEnriched = filteredEnriched.filter(r => r.vendor === filterVendor);
+                
+                setRecords(filteredEnriched.reverse());
             }
         } catch (err) {
             console.error('Load records error:', err);
@@ -314,7 +345,7 @@ function PMHistoryPage({ user, showToast }) {
     return h('div', { className: 'space-y-6 animate-fade-in' },
         h('div', { className: 'flex items-center justify-between flex-wrap gap-4' },
             h('div', null,
-                h('h2', { className: 'text-lg font-semibold' }, 'รายการ PM (Summary)'),
+                h('h2', { className: 'text-lg font-semibold' }, 'PM summary'),
                 h('p', { className: 'text-sm text-surface-400' }, 'ประวัติการตรวจสอบแม่พิมพ์ทั้งหมด')
             ),
             h('div', { className: 'flex gap-2' },
@@ -330,7 +361,7 @@ function PMHistoryPage({ user, showToast }) {
 
         // Filters
         h('div', { className: 'card flex flex-col md:flex-row gap-4 items-center justify-between' },
-            h('div', { className: 'flex gap-3 w-full md:w-auto' },
+            h('div', { className: 'flex gap-3 w-full md:w-auto flex-wrap' },
                 h('div', { className: 'relative w-full md:w-64' },
                     h('i', { className: 'fa-solid fa-search absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm' }),
                     h('input', {
@@ -340,13 +371,28 @@ function PMHistoryPage({ user, showToast }) {
                         onChange: e => setSearchTerm(e.target.value)
                     })
                 ),
+                h('div', { className: 'flex items-center gap-2' },
+                    h('input', {
+                        type: 'date',
+                        className: 'input bg-surface-800 text-sm py-1.5 w-36 cursor-pointer border border-white/10 text-white',
+                        value: startDate,
+                        onChange: e => setStartDate(e.target.value)
+                    }),
+                    h('span', { className: 'text-surface-500 text-sm' }, '-'),
+                    h('input', {
+                        type: 'date',
+                        className: 'input bg-surface-800 text-sm py-1.5 w-36 cursor-pointer border border-white/10 text-white',
+                        value: endDate,
+                        onChange: e => setEndDate(e.target.value)
+                    })
+                ),
                 h('select', {
                     className: 'input bg-surface-800 text-sm py-1.5 w-32 cursor-pointer border border-white/10 text-white',
-                    value: filterYear,
-                    onChange: e => setFilterYear(e.target.value)
+                    value: filterVendor,
+                    onChange: e => setFilterVendor(e.target.value)
                 },
-                    years.map(y => h('option', { key: y, value: y }, y)),
-                    h('option', { value: 'all' }, 'ทุกปี')
+                    h('option', { value: 'all' }, 'ทุก Vendor'),
+                    availableVendors.map(v => h('option', { key: v, value: v }, v))
                 )
             ),
             h('div', { className: 'flex gap-2 w-full md:w-auto overflow-x-auto' },
@@ -385,7 +431,7 @@ function PMHistoryPage({ user, showToast }) {
                         loading
                             ? h('tr', null, h('td', { colSpan: 7, className: 'text-center py-10' }, h('div', { className: 'loading-spinner mx-auto' })))
                             : filteredRecords.length === 0
-                                ? h('tr', null, h('td', { colSpan: 7, className: 'text-center py-10 text-surface-500' }, 'ไม่พบข้อมูลรายการ PM'))
+                                ? h('tr', null, h('td', { colSpan: 7, className: 'text-center py-10 text-surface-500' }, 'ไม่พบข้อมูล PM summary'))
                                 : filteredRecords.map((r, i) => {
                                     const typeInfo = getTypeInfo(r.pm_level);
                                     const data = Array.isArray(r.checklist_data) ? r.checklist_data : [];

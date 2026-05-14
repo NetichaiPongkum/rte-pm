@@ -13,7 +13,10 @@ function SettingsPage({ user, showToast }) {
         password: '',
         display_name: '',
         role: 'operator',
-        vendor_access: 'ALL'
+        vendor_access: 'ALL',
+        can_access_pm: true,
+        can_access_inspection: true,
+        can_access_dashboard: true
     });
     const [availableVendors, setAvailableVendors] = React.useState([]);
 
@@ -69,7 +72,10 @@ function SettingsPage({ user, showToast }) {
 
         try {
             if (window.supabaseClient) {
-                const { error } = await window.supabaseClient.from('users').upsert(formData);
+                // Clean up formData before upserting (remove timestamps and other read-only fields)
+                const { created_at, updated_at, last_login, ...dataToSave } = formData;
+                
+                const { error } = await window.supabaseClient.from('users').upsert(dataToSave);
                 if (error) throw error;
             } else {
                 const list = [...users];
@@ -86,12 +92,15 @@ function SettingsPage({ user, showToast }) {
             setShowModal(false);
             loadUsers();
         } catch (err) {
-            showToast('บันทึกล้มเหลว', 'error');
+            console.error('Save user error:', err);
+            showToast('บันทึกล้มเหลว: ' + (err.message || 'ข้อผิดพลาดฐานข้อมูล'), 'error');
         }
     };
 
     const deleteUser = async (id) => {
-        if (!confirm('ยืนยันการลบผู้ใช้นี้?')) return;
+        if (!id) return showToast('ไม่พบรหัสผู้ใช้', 'warning');
+        if (!window.confirm('ยืนยันการลบผู้ใช้นี้? การดำเนินการนี้ไม่สามารถย้อนกลับได้')) return;
+        
         try {
             if (window.supabaseClient) {
                 const { error } = await window.supabaseClient.from('users').delete().eq('id', id);
@@ -104,7 +113,8 @@ function SettingsPage({ user, showToast }) {
             showToast('ลบสำเร็จ', 'success');
             loadUsers();
         } catch (err) {
-            showToast('ลบล้มเหลว', 'error');
+            console.error('Delete user error:', err);
+            showToast('ลบล้มเหลว: ' + (err.message || 'ข้อผิดพลาดฐานข้อมูล'), 'error');
         }
     };
 
@@ -113,7 +123,7 @@ function SettingsPage({ user, showToast }) {
             setFormData({ ...u });
             setEditingId(u.id);
         } else {
-            setFormData({ username: '', password: '', display_name: '', role: 'operator', vendor_access: 'ALL' });
+            setFormData({ username: '', password: '', display_name: '', role: 'operator', vendor_access: 'ALL', can_access_pm: true, can_access_inspection: true, can_access_dashboard: true });
             setEditingId(null);
         }
         setShowModal(true);
@@ -186,7 +196,7 @@ function SettingsPage({ user, showToast }) {
                 h('div', { className: 'space-y-4' },
                     h('div', null,
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1.5' }, 'ชื่อผู้ใช้ (Username) *'),
-                        h('input', { className: 'input', value: formData.username, onChange: e => setFormData({...formData, username: e.target.value}), disabled: !!editingId })
+                        h('input', { className: 'input', value: formData.username, onChange: e => setFormData({...formData, username: e.target.value}) })
                     ),
                     h('div', null,
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1.5' }, 'รหัสผ่าน *'),
@@ -203,6 +213,23 @@ function SettingsPage({ user, showToast }) {
                                 h('option', { value: 'admin' }, 'Admin'),
                                 h('option', { value: 'engineer' }, 'Engineer'),
                                 h('option', { value: 'operator' }, 'Operator')
+                            )
+                        ),
+                        h('div', null,
+                            h('label', { className: 'block text-xs font-medium text-surface-400 mb-2' }, 'สิทธิ์การใช้งานโมดูล'),
+                            h('div', { className: 'space-y-2' },
+                                h('label', { className: 'flex items-center gap-2 cursor-pointer' },
+                                    h('input', { type: 'checkbox', className: 'checkbox checkbox-primary', checked: formData.can_access_pm, onChange: e => setFormData({...formData, can_access_pm: e.target.checked}) }),
+                                    h('span', { className: 'text-sm text-surface-200' }, 'PM / PM summary')
+                                ),
+                                h('label', { className: 'flex items-center gap-2 cursor-pointer' },
+                                    h('input', { type: 'checkbox', className: 'checkbox checkbox-primary', checked: formData.can_access_inspection, onChange: e => setFormData({...formData, can_access_inspection: e.target.checked}) }),
+                                    h('span', { className: 'text-sm text-surface-200' }, 'Inspection / Inspection summary')
+                                ),
+                                h('label', { className: 'flex items-center gap-2 cursor-pointer' },
+                                    h('input', { type: 'checkbox', className: 'checkbox checkbox-primary', checked: formData.can_access_dashboard, onChange: e => setFormData({...formData, can_access_dashboard: e.target.checked}) }),
+                                    h('span', { className: 'text-sm text-surface-200' }, 'แดชบอร์ด (Dashboard)')
+                                )
                             )
                         ),
                         h('div', { className: 'col-span-full' },
