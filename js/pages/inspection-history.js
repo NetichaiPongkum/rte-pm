@@ -145,6 +145,38 @@ function InspectionHistoryPage({ user, showToast }) {
         }
     };
 
+    const handleDeleteRecord = async (record) => {
+        if (user?.role !== 'admin') {
+            showToast('คุณไม่มีสิทธิ์ลบข้อมูล', 'error');
+            return;
+        }
+
+        if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบรายการของแม่พิมพ์ ${record.mold_code} เมื่อวันที่ ${record.performed_date}?\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) {
+            return;
+        }
+
+        try {
+            if (window.supabaseClient) {
+                const { error } = await window.supabaseClient
+                    .from('inspection_records')
+                    .delete()
+                    .eq('id', record.id);
+                if (error) throw error;
+            } else {
+                // Demo mode
+                let demoRecords = JSON.parse(localStorage.getItem('demo_inspection_records') || '[]');
+                demoRecords = demoRecords.filter(r => r.id !== record.id);
+                localStorage.setItem('demo_inspection_records', JSON.stringify(demoRecords));
+            }
+
+            showToast('ลบรายการสำเร็จ', 'success');
+            loadRecords();
+        } catch (err) {
+            console.error('Delete record error:', err);
+            showToast('ลบรายการไม่สำเร็จ', 'error');
+        }
+    };
+
     const getTypeInfo = (id) => ({ label: 'Type ' + id, icon: 'fa-microscope', color: 'from-primary-500 to-primary-600' });
 
     const filteredRecords = records.filter(r => {
@@ -314,7 +346,7 @@ function InspectionHistoryPage({ user, showToast }) {
                             h('th', null, 'รหัส'),
                             h('th', null, 'ชื่อแม่พิมพ์'),
                             h('th', null, 'หมวดหมู่'),
-                            h('th', null, 'ผลลัพธ์ (P/F/NA)'),
+                            h('th', null, 'Vendor'),
                             h('th', null, 'ผู้ตรวจสอบ'),
                             h('th', { className: 'text-right' }, 'Action')
                         )
@@ -325,39 +357,35 @@ function InspectionHistoryPage({ user, showToast }) {
                             : filteredRecords.length === 0
                                 ? h('tr', null, h('td', { colSpan: 7, className: 'text-center py-10 text-surface-500' }, 'ไม่พบข้อมูล Inspection summary'))
                                 : filteredRecords.map((r, i) => {
-                                    const data = Array.isArray(r.checklist_data) ? r.checklist_data : [];
-                                    const counts = {
-                                        pass: data.filter(d => d.result === 'pass').length,
-                                        fail: data.filter(d => d.result === 'fail').length,
-                                        na:   data.filter(d => d.result === 'na').length
-                                    };
-
                                     return h('tr', { 
                                         key: r.id, 
                                         className: 'animate-slide-up cursor-pointer hover:bg-primary-500/5', 
                                         onClick: () => setSelectedRecord(r)
                                     },
-                                        h('td', null, h('span', { className: 'text-xs' }, r.performed_date || '-')),
+                                        h('td', { className: 'whitespace-nowrap' }, h('span', { className: 'text-xs' }, r.performed_date || '-')),
                                         h('td', null, h('span', { className: 'font-bold text-primary-400' }, r.mold_code)),
                                         h('td', null, h('p', { className: 'text-xs text-white' }, r.mold_name || '-')),
                                         h('td', null, h('span', { className: 'badge badge-primary text-[10px]' }, r.category_name)),
-                                        h('td', null, 
-                                            h('div', { className: 'flex gap-1 text-[10px]' },
-                                                h('span', { className: 'text-emerald-400 font-bold' }, counts.pass),
-                                                h('span', { className: 'text-surface-600' }, '/'),
-                                                h('span', { className: 'text-red-400 font-bold' }, counts.fail),
-                                                h('span', { className: 'text-surface-600' }, '/'),
-                                                h('span', { className: 'text-surface-400 font-bold' }, counts.na)
-                                            )
-                                        ),
-                                        h('td', null, h('span', { className: 'text-xs' }, r.performed_by)),
-                                        h('td', { className: 'text-right' },
-                                            h('div', { className: 'flex justify-end gap-1', onClick: e => e.stopPropagation() },
-                                                user?.role === 'admin' && h('button', { 
-                                                    className: 'btn btn-ghost btn-xs text-amber-400',
+                                        h('td', null, h('span', { className: 'badge badge-info' }, r.vendor || '-')),
+                                        h('td', { className: 'whitespace-nowrap' }, h('span', { className: 'text-xs' }, r.performed_by)),
+                                        h('td', { className: 'text-right whitespace-nowrap' },
+                                            h('div', { className: 'flex justify-end gap-0.5', onClick: e => e.stopPropagation() },
+                                                 user?.role === 'admin' && h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-amber-400 hover:bg-amber-500/10 px-2',
+                                                    title: 'Edit Record',
                                                     onClick: () => { setEditingRecord(r); setEditFormData(JSON.parse(JSON.stringify(r))); }
                                                 }, h('i', { className: 'fa-solid fa-pen-to-square' })),
-                                                h('button', { className: 'btn btn-ghost btn-xs text-primary-400', onClick: () => downloadPDF(r) }, h('i', { className: 'fa-solid fa-file-pdf' }))
+                                                user?.role === 'admin' && h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-red-400 hover:bg-red-500/10 px-2',
+                                                    title: 'Delete Record',
+                                                    onClick: () => handleDeleteRecord(r)
+                                                }, h('i', { className: 'fa-solid fa-trash' })),
+                                                h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-primary-500/10 px-2',
+                                                    title: 'View Details',
+                                                    onClick: () => setSelectedRecord(r)
+                                                }, h('i', { className: 'fa-solid fa-eye' })),
+                                                h('button', { className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-white/10 px-2', onClick: () => downloadPDF(r) }, h('i', { className: 'fa-solid fa-file-pdf' }))
                                             )
                                         )
                                     );
@@ -369,29 +397,98 @@ function InspectionHistoryPage({ user, showToast }) {
 
         // Details Modal
         selectedRecord && h('div', { className: 'fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in' },
-            h('div', { className: 'card w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col' },
+            h('div', { className: 'card w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl border border-white/10' },
+                // Modal Header
                 h('div', { className: 'flex justify-between items-start p-6 border-b border-white/5 bg-surface-800' },
                     h('div', null,
                         h('h3', { className: 'text-lg font-bold text-white' }, 'รายละเอียดการตรวจสอบ (Inspection Details)'),
-                        h('p', { className: 'text-sm text-surface-400 font-mono' }, `DOC: ${selectedRecord.doc_no || '-'}`)
+                        h('p', { className: 'text-sm text-surface-400 mt-1 font-mono' }, `DOC NO: ${selectedRecord.doc_no || selectedRecord.id?.slice(-8).toUpperCase() || '-'}`)
                     ),
                     h('button', { className: 'btn btn-ghost btn-sm', onClick: () => setSelectedRecord(null) }, h('i', { className: 'fa-solid fa-times' }))
                 ),
-                h('div', { className: 'flex-1 overflow-y-auto p-6 space-y-4' },
-                    h('div', { className: 'grid grid-cols-2 gap-4' },
-                        h('div', { className: 'p-3 rounded-lg bg-white/5' }, h('p', { className: 'text-[10px] text-surface-500 uppercase' }, 'Mold Code'), h('p', { className: 'text-sm font-bold' }, selectedRecord.mold_code)),
-                        h('div', { className: 'p-3 rounded-lg bg-white/5' }, h('p', { className: 'text-[10px] text-surface-500 uppercase' }, 'Date'), h('p', { className: 'text-sm font-bold' }, selectedRecord.performed_date))
+
+                // Modal Content
+                h('div', { className: 'flex-1 overflow-y-auto p-6 space-y-6' },
+                    // Info Cards
+                    h('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-4' },
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Mold Code'),
+                            h('p', { className: 'text-sm font-bold text-primary-400' }, selectedRecord.mold_code)
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5 md:col-span-2' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Mold Name / ชื่อแม่พิมพ์'),
+                            h('p', { className: 'text-sm font-bold text-white' }, selectedRecord.mold_name || '-')
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Vendor'),
+                            h('p', { className: 'text-sm font-bold text-white' }, selectedRecord.vendor || '-')
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Date'),
+                            h('p', { className: 'text-sm font-bold text-white' }, selectedRecord.performed_date)
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Performed By'),
+                            h('p', { className: 'text-sm font-bold text-white' }, selectedRecord.performed_by)
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Category'),
+                            h('p', { className: 'text-xs font-bold text-white truncate' }, selectedRecord.category_name || '-')
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                            h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'DWG / Part'),
+                            h('p', { className: 'text-xs font-bold text-white truncate' }, `${selectedRecord.dwg_part1 || '-'} / ${selectedRecord.part_name || '-'}`)
+                        )
                     ),
-                    h('div', { className: 'space-y-2' },
-                        (selectedRecord.checklist_data || []).map((item, idx) => h('div', { key: idx, className: 'flex justify-between text-sm p-2 border-b border-white/5' },
-                            h('span', { className: 'text-surface-300' }, item.name),
-                            h('span', { className: `font-bold uppercase ${item.result === 'pass' ? 'text-emerald-400' : 'text-red-400'}` }, item.result)
-                        ))
+
+                    // Checklist Table
+                    h('div', { className: 'space-y-3' },
+                        h('h4', { className: 'text-sm font-bold text-surface-300' }, 'Inspection Checklist Items'),
+                        h('div', { className: 'overflow-hidden rounded-xl border border-white/5' },
+                            h('table', { className: 'w-full text-sm' },
+                                h('thead', { className: 'bg-white/5 text-[10px] uppercase text-surface-500' },
+                                    h('tr', null,
+                                        h('th', { className: 'p-3 text-left' }, 'No.'),
+                                        h('th', { className: 'p-3 text-left' }, 'Category'),
+                                        h('th', { className: 'p-3 text-left' }, 'Item'),
+                                        h('th', { className: 'p-3 text-center' }, 'Result')
+                                    )
+                                ),
+                                h('tbody', { className: 'divide-y divide-white/5' },
+                                    (selectedRecord.checklist_data || []).map((item, idx) => h('tr', { key: idx, className: 'hover:bg-white/[0.02]' },
+                                        h('td', { className: 'p-3 text-surface-500' }, idx + 1),
+                                        h('td', { className: 'p-3 text-surface-400 text-xs' }, item.category || '-'),
+                                        h('td', { className: 'p-3 text-white' }, item.name),
+                                        h('td', { className: 'p-3 text-center' },
+                                            h('span', { className: `font-bold uppercase text-[10px] ${
+                                                item.result === 'pass' ? 'text-emerald-400'
+                                                : item.result === 'fail' ? 'text-red-400'
+                                                : 'text-surface-500'
+                                            }` }, item.result || 'N/A')
+                                        )
+                                    ))
+                                )
+                            )
+                        )
+                    ),
+
+                    // Notes
+                    h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
+                        h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-2' }, 'Notes / หมายเหตุ'),
+                        h('p', { className: 'text-sm text-surface-200 italic' }, selectedRecord.notes || 'ไม่มีหมายเหตุเพิ่มเติม')
                     )
                 ),
-                h('div', { className: 'p-6 border-t border-white/5 flex justify-end gap-3' },
-                    h('button', { className: 'btn btn-primary', onClick: () => downloadPDF(selectedRecord) }, 'Export PDF'),
-                    h('button', { className: 'btn btn-ghost', onClick: () => setSelectedRecord(null) }, 'ปิด')
+
+                // Modal Footer
+                h('div', { className: 'p-6 border-t border-white/5 bg-surface-800 flex flex-wrap gap-3 justify-end' },
+                    h('button', { 
+                        className: 'btn btn-primary',
+                        onClick: () => downloadPDF(selectedRecord)
+                    }, h('i', { className: 'fa-solid fa-file-pdf mr-2' }), 'Export PDF'),
+                    h('button', { 
+                        className: 'btn btn-ghost',
+                        onClick: () => setSelectedRecord(null)
+                    }, 'ปิดหน้าต่าง')
                 )
             )
         ),

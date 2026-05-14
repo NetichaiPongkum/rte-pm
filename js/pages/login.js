@@ -79,21 +79,14 @@ function LoginPage({ onLogin, showToast }) {
     const h = React.createElement;
 
     return h('div', { className: 'min-h-screen flex items-center justify-center relative overflow-y-auto bg-surface-900' },
-        // Background effects
-        h('div', { className: 'absolute inset-0 pointer-events-none' },
-            h('div', { className: 'absolute top-1/4 left-1/4 w-96 h-96 bg-primary-600/20 rounded-full blur-[120px]' }),
-            h('div', { className: 'absolute bottom-1/4 right-1/4 w-80 h-80 bg-purple-600/15 rounded-full blur-[100px]' }),
-            h('div', { className: 'absolute top-1/2 left-1/2 w-64 h-64 bg-blue-600/10 rounded-full blur-[80px] -translate-x-1/2 -translate-y-1/2' })
-        ),
-
         // Login Card
-        h('div', { className: 'relative z-10 w-full max-w-md mx-4 animate-scale-in' },
-            h('form', { onSubmit: handleSubmit, className: 'card-glass p-8 rounded-2xl' },
+        h('div', { className: 'relative z-10 w-full max-w-md mx-4' },
+            h('form', { onSubmit: handleSubmit, className: 'bg-surface-800 border border-surface-700 p-8 rounded-2xl shadow-2xl' },
                 // Logo
                 h('div', { className: 'text-center mb-8' },
-                    h('div', { className: 'w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-primary-500 to-primary-700 flex items-center justify-center text-white font-bold text-2xl shadow-lg shadow-primary-500/30 mb-4' }, 'PM'),
-                    h('h1', { className: 'text-xl font-bold text-white' }, 'PM Mold RTE'),
-                    h('p', { className: 'text-surface-400 text-sm mt-1' }, 'Preventive Maintenance System')
+                    h('div', { className: 'w-16 h-16 mx-auto rounded-2xl bg-surface-700 flex items-center justify-center text-white font-bold text-2xl mb-4 border border-surface-600' }, 'PM'),
+                    h('h1', { className: 'text-xl font-bold text-white uppercase tracking-wider' }, 'PM Mold RTE'),
+                    h('p', { className: 'text-surface-500 text-xs mt-1 uppercase tracking-widest' }, 'Preventive Maintenance System')
                 ),
 
                 // Error Message
@@ -104,12 +97,12 @@ function LoginPage({ onLogin, showToast }) {
 
                 // Username
                 h('div', { className: 'mb-4' },
-                    h('label', { className: 'block text-sm font-medium text-surface-300 mb-1.5' }, 'ชื่อผู้ใช้'),
+                    h('label', { className: 'block text-sm font-medium text-surface-400 mb-1.5' }, 'ชื่อผู้ใช้'),
                     h('div', { className: 'relative' },
-                        h('i', { className: 'fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm' }),
+                        h('i', { className: 'fa-solid fa-user absolute left-3 top-1/2 -translate-y-1/2 text-surface-600 text-sm' }),
                         h('input', {
                             type: 'text',
-                            className: 'input pl-10',
+                            className: 'input pl-10 border-surface-700 bg-surface-900',
                             placeholder: 'กรอกชื่อผู้ใช้',
                             value: username,
                             onChange: (e) => { setUsername(e.target.value); setError(''); },
@@ -121,12 +114,12 @@ function LoginPage({ onLogin, showToast }) {
 
                 // Password
                 h('div', { className: 'mb-6' },
-                    h('label', { className: 'block text-sm font-medium text-surface-300 mb-1.5' }, 'รหัสผ่าน'),
+                    h('label', { className: 'block text-sm font-medium text-surface-400 mb-1.5' }, 'รหัสผ่าน'),
                     h('div', { className: 'relative' },
-                        h('i', { className: 'fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-surface-500 text-sm' }),
+                        h('i', { className: 'fa-solid fa-lock absolute left-3 top-1/2 -translate-y-1/2 text-surface-600 text-sm' }),
                         h('input', {
                             type: showPassword ? 'text' : 'password',
-                            className: 'input pl-10 pr-10',
+                            className: 'input pl-10 pr-10 border-surface-700 bg-surface-900',
                             placeholder: 'กรอกรหัสผ่าน',
                             value: password,
                             onChange: (e) => { setPassword(e.target.value); setError(''); },
@@ -134,7 +127,7 @@ function LoginPage({ onLogin, showToast }) {
                         }),
                         h('button', {
                             type: 'button',
-                            className: 'absolute right-3 top-1/2 -translate-y-1/2 text-surface-500 hover:text-surface-300 transition-colors',
+                            className: 'absolute right-3 top-1/2 -translate-y-1/2 text-surface-600 hover:text-surface-400 transition-colors',
                             onClick: () => setShowPassword(!showPassword)
                         }, h('i', { className: `fa-solid ${showPassword ? 'fa-eye-slash' : 'fa-eye'} text-sm` }))
                     )
@@ -143,7 +136,7 @@ function LoginPage({ onLogin, showToast }) {
                 // Submit Button
                 h('button', {
                     type: 'submit',
-                    className: 'btn btn-primary w-full py-2.5',
+                    className: 'btn btn-primary w-full py-2.5 shadow-lg shadow-primary-900/20',
                     disabled: isLoading,
                     id: 'login-submit'
                 },
@@ -156,16 +149,6 @@ function LoginPage({ onLogin, showToast }) {
                             h('i', { className: 'fa-solid fa-right-to-bracket' }),
                             'เข้าสู่ระบบ'
                           )
-                ),
-
-                // Demo hint
-                h('div', { className: 'mt-6 pt-4 border-t border-white/5 text-center' },
-                    h('p', { className: 'text-xs text-surface-500' },
-                        'Demo: ใช้ ',
-                        h('span', { className: 'text-primary-400 font-mono' }, 'admin'),
-                        ' / ',
-                        h('span', { className: 'text-primary-400 font-mono' }, 'admin')
-                    )
                 )
             )
         )

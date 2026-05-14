@@ -108,7 +108,7 @@ function App() {
                 case 'pm-history': return window.PMHistoryPage ? h(window.PMHistoryPage, { user, showToast }) : h(ComponentLoading, { name: 'PMHistoryPage' });
                 case 'inspection-history': return window.InspectionHistoryPage ? h(window.InspectionHistoryPage, { user, showToast }) : h(ComponentLoading, { name: 'InspectionHistoryPage' });
                 case 'settings':   return window.SettingsPage ? h(window.SettingsPage, { user, showToast }) : h(ComponentLoading, { name: 'SettingsPage' });
-                case 'dashboard':  return h(PlaceholderPage, { title: 'แดชบอร์ด', icon: 'fa-chart-line' });
+                case 'dashboard':  return window.DashboardPage ? h(window.DashboardPage, { user, showToast }) : h(ComponentLoading, { name: 'DashboardPage' });
                 case 'issues':     return h(PlaceholderPage, { title: 'แจ้งปัญหา', icon: 'fa-triangle-exclamation' });
                 case 'reports':    return h(PlaceholderPage, { title: 'รายงาน', icon: 'fa-file-lines' });
                 default:           return h(HomePage, { user, showToast, setCurrentPage });

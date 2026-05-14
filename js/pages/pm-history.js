@@ -176,6 +176,38 @@ function PMHistoryPage({ user, showToast }) {
         }
     };
 
+    const handleDeleteRecord = async (record) => {
+        if (user?.role !== 'admin') {
+            showToast('คุณไม่มีสิทธิ์ลบข้อมูล', 'error');
+            return;
+        }
+        
+        if (!window.confirm(`คุณแน่ใจหรือไม่ว่าต้องการลบรายการของแม่พิมพ์ ${record.mold_code} เมื่อวันที่ ${record.performed_date}?\nการกระทำนี้ไม่สามารถย้อนกลับได้`)) {
+            return;
+        }
+
+        try {
+            if (window.supabaseClient) {
+                const { error } = await window.supabaseClient
+                    .from('pm_checklist_records')
+                    .delete()
+                    .eq('id', record.id);
+                if (error) throw error;
+            } else {
+                // Demo mode
+                let demoRecords = JSON.parse(localStorage.getItem('demo_pm_records') || '[]');
+                demoRecords = demoRecords.filter(r => r.id !== record.id);
+                localStorage.setItem('demo_pm_records', JSON.stringify(demoRecords));
+            }
+
+            showToast('ลบรายการสำเร็จ', 'success');
+            loadRecords();
+        } catch (err) {
+            console.error('Delete record error:', err);
+            showToast('ลบรายการไม่สำเร็จ', 'error');
+        }
+    };
+
     const getTypeInfo = (id) => (window.CHECKLIST_TYPES || []).find(t => t.id === id) || { label: id, icon: 'fa-list', color: 'from-gray-500 to-gray-600' };
 
     const filteredRecords = records.filter(r => {
@@ -421,7 +453,7 @@ function PMHistoryPage({ user, showToast }) {
                             h('th', null, 'ชื่อแม่พิมพ์'),
                             h('th', null, 'ประเภท'),
                             h('th', null, 'รายการตรวจสอบ'),
-                            h('th', null, 'ผลลัพธ์ (P/F/NA)'),
+                            h('th', null, 'Vendor'),
                             h('th', null, 'ผู้ตรวจสอบ'),
                             h('th', null, 'สถานะ'),
                             h('th', { className: 'text-right' }, 'Action')
@@ -434,20 +466,13 @@ function PMHistoryPage({ user, showToast }) {
                                 ? h('tr', null, h('td', { colSpan: 7, className: 'text-center py-10 text-surface-500' }, 'ไม่พบข้อมูล PM summary'))
                                 : filteredRecords.map((r, i) => {
                                     const typeInfo = getTypeInfo(r.pm_level);
-                                    const data = Array.isArray(r.checklist_data) ? r.checklist_data : [];
-                                    const counts = {
-                                        pass: data.filter(d => d.result === 'pass').length,
-                                        fail: data.filter(d => d.result === 'fail').length,
-                                        na:   data.filter(d => d.result === 'na').length
-                                    };
-
                                     return h('tr', { 
                                         key: r.id, 
                                         className: 'animate-slide-up cursor-pointer hover:bg-primary-500/5 transition-colors', 
                                         style: { animationDelay: (i * 30) + 'ms' },
                                         onClick: () => setSelectedRecord(r)
                                     },
-                                        h('td', null, h('span', { className: 'text-xs' }, r.performed_date || '-')),
+                                        h('td', { className: 'whitespace-nowrap' }, h('span', { className: 'text-xs' }, r.performed_date || '-')),
                                         h('td', null, h('span', { className: 'font-bold text-primary-400' }, r.mold_code)),
                                         h('td', null, 
                                             h('div', null,
@@ -462,36 +487,33 @@ function PMHistoryPage({ user, showToast }) {
                                             )
                                         ),
                                         h('td', null, h('span', { className: 'text-xs' }, r.template_name || '-')),
-                                        h('td', null, 
-                                            h('div', { className: 'flex gap-1' },
-                                                h('span', { className: 'text-emerald-400 font-bold' }, counts.pass),
-                                                h('span', { className: 'text-surface-600' }, '/'),
-                                                h('span', { className: 'text-red-400 font-bold' }, counts.fail),
-                                                h('span', { className: 'text-surface-600' }, '/'),
-                                                h('span', { className: 'text-surface-400 font-bold' }, counts.na)
-                                            )
-                                        ),
-                                        h('td', null, h('span', { className: 'text-xs' }, r.performed_by)),
-                                        h('td', null, 
+                                        h('td', null, h('span', { className: 'badge badge-info' }, r.vendor || '-')),
+                                        h('td', { className: 'whitespace-nowrap' }, h('span', { className: 'text-xs' }, r.performed_by)),
+                                        h('td', { className: 'whitespace-nowrap' }, 
                                             h('span', { className: 'badge badge-success' }, 'เสร็จสิ้น')
                                         ),
-                                        h('td', { className: 'text-right' },
-                                            h('div', { className: 'flex justify-end gap-1', onClick: e => e.stopPropagation() },
+                                        h('td', { className: 'text-right whitespace-nowrap' },
+                                            h('div', { className: 'flex justify-end gap-0.5', onClick: e => e.stopPropagation() },
                                                 user?.role === 'admin' && h('button', { 
-                                                    className: 'btn btn-ghost btn-xs text-amber-400 hover:bg-amber-500/10',
+                                                    className: 'btn btn-ghost btn-xs text-amber-400 hover:bg-amber-500/10 px-2',
                                                     title: 'Edit Record',
                                                     onClick: () => {
                                                         setEditingRecord(r);
                                                         setEditFormData(JSON.parse(JSON.stringify(r)));
                                                     }
                                                 }, h('i', { className: 'fa-solid fa-pen-to-square' })),
+                                                user?.role === 'admin' && h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-red-400 hover:bg-red-500/10 px-2',
+                                                    title: 'Delete Record',
+                                                    onClick: () => handleDeleteRecord(r)
+                                                }, h('i', { className: 'fa-solid fa-trash' })),
                                                 h('button', { 
-                                                    className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-primary-500/10',
+                                                    className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-primary-500/10 px-2',
                                                     title: 'View Details',
                                                     onClick: () => setSelectedRecord(r)
                                                 }, h('i', { className: 'fa-solid fa-eye' })),
                                                 h('button', { 
-                                                    className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-white/10',
+                                                    className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-white/10 px-2',
                                                     title: 'Download PDF',
                                                     onClick: () => downloadPDF(r)
                                                 }, h('i', { className: 'fa-solid fa-file-pdf' }))
