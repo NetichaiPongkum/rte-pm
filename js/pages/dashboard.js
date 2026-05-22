@@ -130,7 +130,7 @@ function DashboardPage({ user, showToast }) {
         const lv = r.pm_level || 'Unknown';
         levelMap[lv] = (levelMap[lv] || 0) + 1;
     });
-    const levelData = Object.entries(levelMap).map(([name, value]) => ({ name, value }));
+    const levelData = Object.entries(levelMap).map(([name, value]) => ({ name: 'Level ' + name, value }));
 
     // ── Top molds ────────────────────────────────────
     const getTopMolds = (recs) => {
@@ -340,31 +340,19 @@ function DashboardPage({ user, showToast }) {
                             )
                         )
                 ),
-                // Table: Top Molds
-                h('div', { className: 'card shadow-sm' },
-                    h(SectionHeader, { title: 'แม่พิมพ์ที่ทำ PM สูงสุด 5 อันดับ', icon: 'fa-trophy', color: 'text-amber-400' }),
-                    pmTopMolds.length === 0
-                        ? h('div', { className: 'flex items-center justify-center h-48 text-surface-500 text-sm' }, 'ไม่มีข้อมูล')
-                        : h('div', { className: 'space-y-4 mt-4' },
-                            pmTopMolds.map((m, i) => {
-                                const maxCount = Math.max(...pmTopMolds.map(x => x.count), 1);
-                                const pct = Math.round((m.count / maxCount) * 100);
-                                return h('div', { key: m.mold, className: 'flex items-center gap-4 group' },
-                                    h('div', { className: 'w-8 h-8 rounded-full bg-surface-800 flex items-center justify-center text-sm font-bold text-surface-400 group-hover:text-white group-hover:bg-primary-500 transition-colors' }, i+1),
-                                    h('div', { className: 'flex-1 min-w-0' },
-                                        h('div', { className: 'flex justify-between items-center mb-1.5' },
-                                            h('div', { className: 'min-w-0 flex-1 pr-2' },
-                                                h('p', { className: 'text-sm font-bold text-white truncate leading-tight' }, m.mold),
-                                                h('p', { className: 'text-[11px] text-surface-400 truncate leading-tight' }, m.name)
-                                            ),
-                                            h('span', { className: 'text-xs font-semibold px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-300 whitespace-nowrap' }, `${m.count} ครั้ง`)
-                                        ),
-                                        h('div', { className: 'h-2 bg-surface-800 rounded-full overflow-hidden' },
-                                            h('div', { className: 'h-full bg-indigo-500 rounded-full transition-all', style: { width: `${pct}%` } })
-                                        )
-                                    )
-                                );
-                            })
+                // Pie Chart: Level Proportion
+                h('div', { className: 'card shadow-sm flex flex-col' },
+                    h(SectionHeader, { title: 'สัดส่วน Level การทำ PM', icon: 'fa-chart-pie', color: 'text-indigo-400' }),
+                    levelData.length === 0
+                        ? h('div', { className: 'flex-1 flex items-center justify-center text-surface-500 text-sm min-h-[200px]' }, 'ไม่มีข้อมูล')
+                        : h(ResponsiveContainer, { width: '100%', height: 240 },
+                            h(PieChart, null,
+                                h(Pie, { data: levelData, cx: '50%', cy: '50%', innerRadius: 55, outerRadius: 80, paddingAngle: 5, dataKey: 'value' },
+                                    levelData.map((_, i) => h(Cell, { key: i, fill: LEVEL_COLORS[i % LEVEL_COLORS.length] }))
+                                ),
+                                h(Tooltip, { contentStyle: tooltipStyle }),
+                                h(Legend, { wrapperStyle: { fontSize: '11px', paddingTop: '10px' }, iconSize: 8 })
+                            )
                         )
                 )
             ),
