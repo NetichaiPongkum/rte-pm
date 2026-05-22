@@ -733,7 +733,7 @@ function DashboardPage({ user, showToast }) {
             stats: inspYearlyStats,
             isPm: false
         })
-    );
+    ));
 }
 
 window.DashboardPage = DashboardPage;
