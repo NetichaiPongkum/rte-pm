@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS public.inspection_records (
     category_name TEXT,
     pm_level INTEGER,
     mold_code TEXT NOT NULL,
+    vendor TEXT,
     performed_by TEXT,
     performed_date DATE,
     checklist_data JSONB DEFAULT '[]',
