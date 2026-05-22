@@ -204,6 +204,11 @@ function DashboardPage({ user, showToast }) {
 
     // ── Tooltip styles ────────────────────────────────
     const tooltipStyle = { backgroundColor: '#0f172a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff', fontSize: '12px', padding: '8px 12px' };
+    const tooltipConfig = {
+        contentStyle: tooltipStyle,
+        labelStyle: { color: '#ffffff' },
+        itemStyle: { color: '#ffffff' }
+    };
 
     // ── Render Tabs ───────────────────────────────────
     const TabButton = ({ id, label, icon }) =>
@@ -289,7 +294,7 @@ function DashboardPage({ user, showToast }) {
                                 h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', vertical: false }),
                                 h(XAxis, { dataKey: 'label', tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false, dy: 10 }),
                                 h(YAxis, { tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
-                                h(Tooltip, { contentStyle: tooltipStyle }),
+                                h(Tooltip, tooltipConfig),
                                 h(Legend, { wrapperStyle: { fontSize: '12px', paddingTop: '10px' } }),
                                 h(Line, { type: 'monotone', dataKey: 'pass', name: 'Pass Items', stroke: '#10b981', strokeWidth: 3, dot: { r: 3, fill: '#10b981' }, activeDot: { r: 5 } }),
                                 h(Line, { type: 'monotone', dataKey: 'fail', name: 'Fail Items', stroke: '#f43f5e', strokeWidth: 3, dot: { r: 3, fill: '#f43f5e' }, activeDot: { r: 5 } })
@@ -308,7 +313,7 @@ function DashboardPage({ user, showToast }) {
                                         h(Pie, { data: pmPieData, cx: '50%', cy: '50%', innerRadius: 55, outerRadius: 85, paddingAngle: 5, dataKey: 'value' },
                                             pmPieData.map((_, i) => h(Cell, { key: i, fill: COLORS[i] }))
                                         ),
-                                        h(Tooltip, { contentStyle: tooltipStyle })
+                                        h(Tooltip, tooltipConfig)
                                     )
                                 )
                             ),
@@ -333,7 +338,7 @@ function DashboardPage({ user, showToast }) {
                                 h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', horizontal: false }),
                                 h(XAxis, { type: 'number', tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
                                 h(YAxis, { type: 'category', dataKey: 'name', tick: { fill: '#cbd5e1', fontSize: 12, fontWeight: 600 }, axisLine: false, tickLine: false, width: 70 }),
-                                h(Tooltip, { contentStyle: tooltipStyle, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
+                                h(Tooltip, { ...tooltipConfig, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
                                 h(Bar, { dataKey: 'value', name: 'จำนวนรายการ', radius: [0,4,4,0], barSize: 24 },
                                     levelData.map((_, i) => h(Cell, { key: i, fill: LEVEL_COLORS[i % LEVEL_COLORS.length] }))
                                 )
@@ -350,7 +355,7 @@ function DashboardPage({ user, showToast }) {
                                 h(Pie, { data: levelData, cx: '50%', cy: '50%', innerRadius: 55, outerRadius: 80, paddingAngle: 5, dataKey: 'value' },
                                     levelData.map((_, i) => h(Cell, { key: i, fill: LEVEL_COLORS[i % LEVEL_COLORS.length] }))
                                 ),
-                                h(Tooltip, { contentStyle: tooltipStyle }),
+                                h(Tooltip, tooltipConfig),
                                 h(Legend, { wrapperStyle: { fontSize: '11px', paddingTop: '10px' }, iconSize: 8 })
                             )
                         )
@@ -368,7 +373,7 @@ function DashboardPage({ user, showToast }) {
                                 h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', vertical: false }),
                                 h(XAxis, { dataKey: 'name', tick: { fill: '#94a3b8', fontSize: 10 }, axisLine: false, tickLine: false, tickFormatter: (v) => v.length > 15 ? v.substring(0, 15) + '...' : v }),
                                 h(YAxis, { tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
-                                h(Tooltip, { contentStyle: tooltipStyle, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
+                                h(Tooltip, { ...tooltipConfig, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
                                 h(Bar, { dataKey: 'value', name: 'จำนวนปัญหา (ครั้ง)', radius: [4,4,0,0], barSize: 32 },
                                     pmProblemsTop.map((_, i) => h(Cell, { key: i, fill: PROBLEM_COLORS[i % PROBLEM_COLORS.length] }))
                                 )
@@ -384,7 +389,7 @@ function DashboardPage({ user, showToast }) {
                                 h(Pie, { data: pmProblemsTop, cx: '50%', cy: '50%', outerRadius: 85, paddingAngle: 2, dataKey: 'value', label: false },
                                     pmProblemsTop.map((_, i) => h(Cell, { key: i, fill: PROBLEM_COLORS[i % PROBLEM_COLORS.length] }))
                                 ),
-                                h(Tooltip, { contentStyle: tooltipStyle, formatter: (value, name) => [value, name] }),
+                                h(Tooltip, { ...tooltipConfig, formatter: (value, name) => [value, name] }),
                                 h(Legend, { wrapperStyle: { fontSize: '11px', overflow: 'hidden', maxHeight: '100px' }, iconSize: 8 })
                             )
                         )
@@ -416,7 +421,7 @@ function DashboardPage({ user, showToast }) {
                                 h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', vertical: false }),
                                 h(XAxis, { dataKey: 'label', tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false, dy: 10 }),
                                 h(YAxis, { tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
-                                h(Tooltip, { contentStyle: tooltipStyle }),
+                                h(Tooltip, tooltipConfig),
                                 h(Legend, { wrapperStyle: { fontSize: '12px', paddingTop: '10px' } }),
                                 h(Line, { type: 'monotone', dataKey: 'pass', name: 'Pass Items', stroke: '#10b981', strokeWidth: 3, dot: { r: 3, fill: '#10b981' }, activeDot: { r: 5 } }),
                                 h(Line, { type: 'monotone', dataKey: 'fail', name: 'Fail Items', stroke: '#f43f5e', strokeWidth: 3, dot: { r: 3, fill: '#f43f5e' }, activeDot: { r: 5 } })
@@ -435,7 +440,7 @@ function DashboardPage({ user, showToast }) {
                                         h(Pie, { data: inspPieData, cx: '50%', cy: '50%', innerRadius: 55, outerRadius: 85, paddingAngle: 5, dataKey: 'value' },
                                             inspPieData.map((_, i) => h(Cell, { key: i, fill: COLORS[i] }))
                                         ),
-                                        h(Tooltip, { contentStyle: tooltipStyle })
+                                        h(Tooltip, tooltipConfig)
                                     )
                                 )
                             ),
@@ -460,7 +465,7 @@ function DashboardPage({ user, showToast }) {
                                 h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', vertical: false }),
                                 h(XAxis, { dataKey: 'label', tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
                                 h(YAxis, { tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
-                                h(Tooltip, { contentStyle: tooltipStyle, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
+                                h(Tooltip, { ...tooltipConfig, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
                                 h(Bar, { dataKey: 'count', name: 'จำนวนรายการ', fill: '#06b6d4', radius: [4,4,0,0], barSize: 32 })
                             )
                         )
@@ -505,7 +510,7 @@ function DashboardPage({ user, showToast }) {
                                 h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', vertical: false }),
                                 h(XAxis, { dataKey: 'name', tick: { fill: '#94a3b8', fontSize: 10 }, axisLine: false, tickLine: false, tickFormatter: (v) => v.length > 15 ? v.substring(0, 15) + '...' : v }),
                                 h(YAxis, { tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
-                                h(Tooltip, { contentStyle: tooltipStyle, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
+                                h(Tooltip, { ...tooltipConfig, cursor: { fill: 'rgba(255,255,255,0.05)' } }),
                                 h(Bar, { dataKey: 'value', name: 'จำนวนปัญหา (ครั้ง)', radius: [4,4,0,0], barSize: 32 },
                                     inspProblemsTop.map((_, i) => h(Cell, { key: i, fill: PROBLEM_COLORS[i % PROBLEM_COLORS.length] }))
                                 )
@@ -521,7 +526,7 @@ function DashboardPage({ user, showToast }) {
                                 h(Pie, { data: inspProblemsTop, cx: '50%', cy: '50%', outerRadius: 85, paddingAngle: 2, dataKey: 'value', label: false },
                                     inspProblemsTop.map((_, i) => h(Cell, { key: i, fill: PROBLEM_COLORS[i % PROBLEM_COLORS.length] }))
                                 ),
-                                h(Tooltip, { contentStyle: tooltipStyle, formatter: (value, name) => [value, name] }),
+                                h(Tooltip, { ...tooltipConfig, formatter: (value, name) => [value, name] }),
                                 h(Legend, { wrapperStyle: { fontSize: '11px', overflow: 'hidden', maxHeight: '100px' }, iconSize: 8 })
                             )
                         )
