@@ -156,6 +156,7 @@ function MoldHistoryPage({ user, showToast }) {
                 </div>
                 <div style="flex:1;">
                     <div style="display:flex;margin-bottom:3px;"><span style="font-weight:bold;width:90px;color:#555;">Category:</span><span style="flex:1;border-bottom:1px dotted #ccc;">${record.category_name||'-'}</span></div>
+                    <div style="display:flex;margin-bottom:3px;"><span style="font-weight:bold;width:90px;color:#555;">Vendor:</span><span style="flex:1;border-bottom:1px dotted #ccc;">${record.vendor||selectedMold?.vendor||'-'}</span></div>
                     <div style="display:flex;margin-bottom:3px;"><span style="font-weight:bold;width:90px;color:#555;">Performed By:</span><span style="flex:1;border-bottom:1px dotted #ccc;">${record.performed_by||'-'}</span></div>
                     <div style="display:flex;margin-bottom:3px;"><span style="font-weight:bold;width:90px;color:#555;">Date:</span><span style="flex:1;border-bottom:1px dotted #ccc;">${record.performed_date||'-'}</span></div>
                 </div>
@@ -258,6 +259,7 @@ function MoldHistoryPage({ user, showToast }) {
                 <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;font-weight:600;color:#4f46e5;">${r.doc_no||'-'}</td>
                 <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${r.category_name||'-'}</td>
                 <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${isPm?'Level '+(r.pm_level||1):'Type '+(r.pm_level||1)}</td>
+                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${r.vendor||'-'}</td>
                 <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${r.performed_by||'-'}</td>
                 <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">
                     ${(r.checklist_data||[]).filter(i=>i.result==='pass').length} / ${(r.checklist_data||[]).length}
@@ -336,6 +338,7 @@ function MoldHistoryPage({ user, showToast }) {
                         <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Doc No.</th>
                         <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Category</th>
                         <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Level</th>
+                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Vendor</th>
                         <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Performed By</th>
                         <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:center;">Pass/Total</th>
                         <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:center;">Status</th>
@@ -386,13 +389,13 @@ function MoldHistoryPage({ user, showToast }) {
         if (records.length === 0) { showToast('ไม่มีข้อมูลที่จะส่งออก', 'warning'); return; }
         let csv = '\uFEFF';
         csv += `${isPm?'PM':'Inspection'} History Summary: ${selectedMold?.mold_code} (${selectedMold?.mold_name||''})\n`;
-        csv += `DWG: ${selectedMold?.dwg_part1||'-'}, Vendor: ${selectedMold?.vendor||'-'}\n\n`;
-        csv += 'No.,Date,Doc No.,Category,Level,Performed By,Pass,Total,Status\n';
+        csv += `DWG: ${selectedMold?.dwg_part1||'-'}, Current Vendor: ${selectedMold?.vendor||'-'}\n\n`;
+        csv += 'No.,Date,Doc No.,Category,Level,Vendor,Performed By,Pass,Total,Status\n';
         records.forEach((r, idx) => {
             const passItems = (r.checklist_data||[]).filter(i=>i.result==='pass').length;
             const totalItems = (r.checklist_data||[]).length;
             const status = (r.checklist_data||[]).some(i=>i.result==='fail') ? 'FAIL' : 'PASS';
-            csv += `${idx+1},"${r.performed_date||''}","${r.doc_no||''}","${r.category_name||''}","${isPm?'Level ':'Type '}${r.pm_level||1}","${r.performed_by||''}",${passItems},${totalItems},${status}\n`;
+            csv += `${idx+1},"${r.performed_date||''}","${r.doc_no||''}","${r.category_name||''}","${isPm?'Level ':'Type '}${r.pm_level||1}","${r.vendor||''}","${r.performed_by||''}",${passItems},${totalItems},${status}\n`;
         });
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -464,7 +467,7 @@ function MoldHistoryPage({ user, showToast }) {
                         h('p', { className: 'text-lg text-primary-300 font-medium mb-6' }, selectedMold.mold_name || 'No Name'),
                         h('div', { className: 'grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-8' },
                             h('div', null, h('p', { className: 'text-xs text-surface-500 font-bold uppercase mb-1' }, 'DWG / Part'), h('p', { className: 'font-semibold text-white' }, selectedMold.dwg_part1 || '-')),
-                            h('div', null, h('p', { className: 'text-xs text-surface-500 font-bold uppercase mb-1' }, 'Vendor'), h('p', { className: 'font-semibold text-white' }, selectedMold.vendor || '-')),
+                            h('div', null, h('p', { className: 'text-xs text-surface-500 font-bold uppercase mb-1' }, 'Current Vendor (ปัจจุบัน)'), h('p', { className: 'font-semibold text-white' }, selectedMold.vendor || '-')),
                             h('div', null, h('p', { className: 'text-xs text-surface-500 font-bold uppercase mb-1' }, 'Customer'), h('p', { className: 'font-semibold text-white' }, selectedMold.customer || '-'))
                         )
                     ),
@@ -532,6 +535,7 @@ function MoldHistoryPage({ user, showToast }) {
                                 h('div', { className: 'w-24 text-surface-400 text-xs shrink-0' }, r.performed_date),
                                 h('div', { className: 'w-16 font-semibold text-indigo-400 text-[10px] shrink-0' }, `Level ${r.pm_level || 1}`),
                                 h('div', { className: 'flex-1 text-white truncate text-xs' }, h('i', { className: 'fa-solid fa-user text-surface-500 mr-1.5 text-[10px]' }), r.performed_by),
+                                r.vendor && h('span', { className: 'text-[9px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded shrink-0' }, r.vendor),
                                 h('div', { className: 'shrink-0' }, getStatusBadge(r.status)),
                                 h('div', { className: 'flex gap-1 shrink-0' },
                                     h('button', {
@@ -570,6 +574,7 @@ function MoldHistoryPage({ user, showToast }) {
                                 h('div', { className: 'w-24 text-surface-400 text-xs shrink-0' }, r.performed_date),
                                 h('div', { className: 'w-16 font-semibold text-cyan-400 text-[10px] shrink-0' }, `Type ${r.pm_level || 1}`),
                                 h('div', { className: 'flex-1 text-white truncate text-xs' }, h('i', { className: 'fa-solid fa-user text-surface-500 mr-1.5 text-[10px]' }), r.performed_by),
+                                r.vendor && h('span', { className: 'text-[9px] text-amber-400 font-bold bg-amber-500/10 px-1.5 py-0.5 rounded shrink-0' }, r.vendor),
                                 h('div', { className: 'shrink-0' }, getStatusBadge(r.status)),
                                 h('div', { className: 'flex gap-1 shrink-0' },
                                     h('button', {
@@ -626,6 +631,10 @@ function MoldHistoryPage({ user, showToast }) {
                         h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
                             h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'DWG / Part'),
                             h('p', { className: 'text-xs font-bold text-white' }, selectedMold?.dwg_part1 || '-')
+                        ),
+                        h('div', { className: 'p-4 rounded-xl bg-amber-500/5 border border-amber-500/20' },
+                            h('p', { className: 'text-[10px] text-amber-400 uppercase font-bold mb-1' }, 'Vendor (ขณะบันทึก)'),
+                            h('p', { className: 'text-sm font-bold text-amber-300' }, selectedRecordModal.vendor || selectedMold?.vendor || '-')
                         ),
                         h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
                             h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-1' }, 'Date'),

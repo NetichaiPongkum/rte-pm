@@ -81,7 +81,7 @@ function InspectionHistoryPage({ user, showToast }) {
                         mold_name: moldsMap[r.mold_code]?.mold_name || '-',
                         dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
                         part_name: moldsMap[r.mold_code]?.part_name || '-',
-                        vendor: moldsMap[r.mold_code]?.vendor || '-',
+                        vendor: r.vendor || moldsMap[r.mold_code]?.vendor || '-',
                     };
                 });
 
