@@ -28,6 +28,12 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
         loadData();
     }, [vendorAccess]);
 
+    React.useEffect(() => {
+        if (selectedMold) {
+            selectMold(selectedMold);
+        }
+    }, [selectedMold]);
+
     const loadData = async () => {
         setLoading(true);
         try {

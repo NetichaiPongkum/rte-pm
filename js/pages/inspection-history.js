@@ -81,7 +81,7 @@ function InspectionHistoryPage({ user, showToast }) {
                         mold_name: moldsMap[r.mold_code]?.mold_name || '-',
                         dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
                         part_name: moldsMap[r.mold_code]?.part_name || '-',
-                        vendor: r.vendor || moldsMap[r.mold_code]?.vendor || '-',
+                        vendor: (r.vendor !== undefined && r.vendor !== null && r.vendor !== '') ? r.vendor : (moldsMap[r.mold_code]?.vendor || '-'),
                     };
                 });
 
@@ -216,8 +216,10 @@ function InspectionHistoryPage({ user, showToast }) {
                     <div style="flex: 1;">
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Asset Code:</span> <span style="font-weight: 700; flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.mold_code || '-'}</span></div>
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Name:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.mold_name || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">DWG / Part:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.dwg_part1 || '-'} / ${record.part_name || '-'}</span></div>
                     </div>
                     <div style="flex: 1;">
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Vendor:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.vendor || '-'}</span></div>
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Performed By:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.performed_by || '-'}</span></div>
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Date:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.performed_date || '-'}</span></div>
                     </div>
@@ -281,14 +283,79 @@ function InspectionHistoryPage({ user, showToast }) {
         });
     };
 
+    const exportToExcel = () => {
+        if (filteredRecords.length === 0) return showToast('ไม่มีข้อมูลที่จะส่งออก', 'warning');
+        
+        // CSV Header
+        let csvContent = "\uFEFF"; // BOM for UTF-8
+        csvContent += "Date,Mold Code,Mold Name,Category,Vendor,Performed By,Status\n";
+        
+        // Data Rows
+        filteredRecords.forEach(r => {
+            const row = [
+                r.performed_date,
+                r.mold_code,
+                r.mold_name,
+                r.category_name,
+                r.vendor,
+                r.performed_by,
+                'Completed'
+            ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(",");
+            csvContent += row + "\n";
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Inspection_History_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
+    const exportRecordToExcel = (record) => {
+        const data = Array.isArray(record.checklist_data) ? record.checklist_data : [];
+        let csvContent = "\uFEFF";
+        csvContent += `Mold Inspection Sheet: ${record.mold_code} (${record.mold_name || '-'})\n`;
+        csvContent += `DOC NO: ${record.doc_no || record.id?.slice(-8).toUpperCase() || '-'}\n`;
+        csvContent += `Category: ${record.category_name || '-'}, Vendor: ${record.vendor || '-'}\n`;
+        csvContent += `Performed By: ${record.performed_by || '-'}, Date: ${record.performed_date || '-'}\n\n`;
+        csvContent += "No.,Inspection Item,Result\n";
+        
+        data.forEach((item, idx) => {
+            const row = [
+                idx + 1,
+                item.name,
+                item.result || 'N/A'
+            ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(",");
+            csvContent += row + "\n";
+        });
+        
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Inspection_Record_${record.mold_code}_${record.performed_date}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     return h('div', { className: 'space-y-6 animate-fade-in' },
         h('div', { className: 'flex items-center justify-between flex-wrap gap-4' },
             h('div', null,
                 h('h2', { className: 'text-lg font-semibold' }, 'Inspection summary'),
                 h('p', { className: 'text-sm text-surface-400' }, 'สรุปผลการตรวจสอบชิ้นงานและแม่พิมพ์')
             ),
-            h('button', { className: 'btn btn-secondary btn-sm', onClick: loadRecords },
-                h('i', { className: 'fa-solid fa-sync mr-2' }), 'รีเฟรช'
+            h('div', { className: 'flex gap-2' },
+                h('button', { 
+                    className: 'btn btn-secondary btn-sm', 
+                    onClick: () => exportToExcel() 
+                }, h('i', { className: 'fa-solid fa-file-excel mr-2 text-emerald-500' }), 'Export Excel'),
+                h('button', { className: 'btn btn-secondary btn-sm', onClick: loadRecords },
+                    h('i', { className: 'fa-solid fa-sync mr-2' }), 'รีเฟรช'
+                )
             )
         ),
 
@@ -385,7 +452,16 @@ function InspectionHistoryPage({ user, showToast }) {
                                                     title: 'View Details',
                                                     onClick: () => setSelectedRecord(r)
                                                 }, h('i', { className: 'fa-solid fa-eye' })),
-                                                h('button', { className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-white/10 px-2', onClick: () => downloadPDF(r) }, h('i', { className: 'fa-solid fa-file-pdf' }))
+                                                h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-white/10 px-2', 
+                                                    title: 'Download PDF',
+                                                    onClick: () => downloadPDF(r) 
+                                                }, h('i', { className: 'fa-solid fa-file-pdf' })),
+                                                h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-emerald-400 hover:bg-white/10 px-2', 
+                                                    title: 'Download Excel',
+                                                    onClick: () => exportRecordToExcel(r) 
+                                                }, h('i', { className: 'fa-solid fa-file-excel' }))
                                             )
                                         )
                                     );
@@ -485,6 +561,10 @@ function InspectionHistoryPage({ user, showToast }) {
                         className: 'btn btn-primary',
                         onClick: () => downloadPDF(selectedRecord)
                     }, h('i', { className: 'fa-solid fa-file-pdf mr-2' }), 'Export PDF'),
+                    h('button', { 
+                        className: 'btn bg-emerald-600 hover:bg-emerald-500 text-white',
+                        onClick: () => exportRecordToExcel(selectedRecord)
+                    }, h('i', { className: 'fa-solid fa-file-excel mr-2' }), 'Download Excel'),
                     h('button', { 
                         className: 'btn btn-ghost',
                         onClick: () => setSelectedRecord(null)

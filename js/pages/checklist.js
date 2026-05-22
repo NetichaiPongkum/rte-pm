@@ -28,6 +28,12 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
         loadData();
     }, [vendorAccess]);
 
+    React.useEffect(() => {
+        if (selectedMold) {
+            selectMold(selectedMold);
+        }
+    }, [selectedMold]);
+
     const loadData = async () => {
         setLoading(true);
         try {

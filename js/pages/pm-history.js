@@ -84,7 +84,7 @@ function PMHistoryPage({ user, showToast }) {
                         mold_name: moldsMap[r.mold_code]?.mold_name || '-',
                         dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
                         part_name: moldsMap[r.mold_code]?.part_name || '-',
-                        vendor: r.vendor || moldsMap[r.mold_code]?.vendor || '-',
+                        vendor: (r.vendor !== undefined && r.vendor !== null && r.vendor !== '') ? r.vendor : (moldsMap[r.mold_code]?.vendor || '-'),
                     };
                 });
 
@@ -125,7 +125,7 @@ function PMHistoryPage({ user, showToast }) {
                         mold_name: moldsMap[r.mold_code]?.mold_name || '-',
                         dwg_part1: moldsMap[r.mold_code]?.dwg_part1 || '-',
                         part_name: moldsMap[r.mold_code]?.part_name || '-',
-                        vendor: moldsMap[r.mold_code]?.vendor || '-',
+                        vendor: (r.vendor !== undefined && r.vendor !== null && r.vendor !== '') ? r.vendor : (moldsMap[r.mold_code]?.vendor || '-'),
                     };
                 });
                 
@@ -254,6 +254,7 @@ function PMHistoryPage({ user, showToast }) {
                     </div>
                     <div style="flex: 1;">
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Category:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.category_name || '-'}</span></div>
+                        <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Vendor:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.vendor || '-'}</span></div>
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Performed By:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.performed_by || '-'}</span></div>
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Date:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">${record.performed_date || '-'}</span></div>
                         <div style="display: flex; margin-bottom: 3px;"><span style="font-weight: bold; width: 90px; color: #555;">Status:</span> <span style="flex: 1; border-bottom: 1px dotted #ccc; color: #000;">Completed / เสร็จสิ้น</span></div>
@@ -329,15 +330,17 @@ function PMHistoryPage({ user, showToast }) {
         
         // CSV Header
         let csvContent = "\uFEFF"; // BOM for UTF-8
-        csvContent += "Date,Mold Code,Category,Level,Performed By,Status\n";
+        csvContent += "Date,Mold Code,Mold Name,Category,Level,Vendor,Performed By,Status\n";
         
         // Data Rows
         filteredRecords.forEach(r => {
             const row = [
                 r.performed_date,
                 r.mold_code,
+                r.mold_name,
                 r.category_name,
                 r.pm_level,
+                r.vendor,
                 r.performed_by,
                 'Completed'
             ].map(v => `"${(v || '').toString().replace(/"/g, '""')}"`).join(",");
@@ -358,7 +361,7 @@ function PMHistoryPage({ user, showToast }) {
         const data = Array.isArray(record.checklist_data) ? record.checklist_data : [];
         let csvContent = "\uFEFF";
         csvContent += `PM Check Sheet: ${record.mold_code}\n`;
-        csvContent += `Category: ${record.category_name}, Level: ${record.pm_level}\n`;
+        csvContent += `Category: ${record.category_name}, Level: ${record.pm_level}, Vendor: ${record.vendor || '-'}\n`;
         csvContent += `Performed By: ${record.performed_by}, Date: ${record.performed_date}\n\n`;
         csvContent += "No.,Category,Inspection Item,Result\n";
         
@@ -371,7 +374,9 @@ function PMHistoryPage({ user, showToast }) {
         const link = document.createElement("a");
         link.setAttribute("href", url);
         link.setAttribute("download", `PM_Record_${record.mold_code}_${record.performed_date}.csv`);
+        document.body.appendChild(link);
         link.click();
+        document.body.removeChild(link);
     };
 
     return h('div', { className: 'space-y-6 animate-fade-in' },
@@ -516,7 +521,12 @@ function PMHistoryPage({ user, showToast }) {
                                                     className: 'btn btn-ghost btn-xs text-primary-400 hover:bg-white/10 px-2',
                                                     title: 'Download PDF',
                                                     onClick: () => downloadPDF(r)
-                                                }, h('i', { className: 'fa-solid fa-file-pdf' }))
+                                                }, h('i', { className: 'fa-solid fa-file-pdf' })),
+                                                h('button', { 
+                                                    className: 'btn btn-ghost btn-xs text-emerald-400 hover:bg-white/10 px-2',
+                                                    title: 'Download Excel',
+                                                    onClick: () => exportRecordToExcel(r)
+                                                }, h('i', { className: 'fa-solid fa-file-excel' }))
                                             )
                                         )
                                     );
