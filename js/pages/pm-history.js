@@ -61,9 +61,19 @@ function PMHistoryPage({ user, showToast }) {
                     query = query.lte('performed_date', endDate);
                 }
                 
-                // We do NOT filter by mold_code yet so we can compute correct sequence numbers for ALL records
-                const { data: allData, error } = await query.order('created_at', { ascending: true });
+                // Order by newest first to get the latest records
+                query = query.order('created_at', { ascending: false });
+                
+                // If no date filters are set, limit to 50 records
+                if (!startDate && !endDate) {
+                    query = query.limit(50);
+                }
+                
+                const { data: fetchedData, error } = await query;
                 if (error) throw error;
+                
+                // Reverse so doc_no generation counts from oldest to newest within the chunk
+                const allData = (fetchedData || []).reverse();
                 
                 // Fetch mold info for enrichment
                 const { data: allMolds } = await window.supabaseClient.from('mold_master').select('mold_code, mold_name, dwg_part1, part_name, vendor');

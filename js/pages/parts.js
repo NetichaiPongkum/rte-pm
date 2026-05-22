@@ -41,7 +41,7 @@ function PartsPage({ user, showToast }) {
                     query = query.in('vendor', vendors);
                 }
                 
-                const { data, error } = await query.order('mold_code');
+                const { data, error } = await query.order('mold_code').limit(50);
                 if (error) throw error;
                 setMolds(data || []);
             } else {
