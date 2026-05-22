@@ -119,6 +119,7 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
                 category_name: selectedCategory.name,
                 pm_level: selectedTemplate.pm_level,
                 mold_code: moldCode.trim(),
+                vendor: moldInfo.vendor || '',
                 performed_by: user?.display_name || user?.username || 'Unknown',
                 performed_date: new Date().toISOString().split('T')[0],
                 checklist_data: results,
@@ -207,19 +208,21 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
                 )
             ),
 
-            ...items.map((item, idx) => h('div', { key: idx, className: 'card flex items-center justify-between hover:bg-white/[0.02] transition-colors' },
-                h('div', { className: 'flex-1 pr-4' },
-                    h('p', { className: 'text-[10px] text-primary-500 font-bold uppercase mb-0.5' }, item.category || 'INSPECTION'),
-                    h('p', { className: 'text-sm text-white' }, (idx + 1) + '. ' + item.name)
-                ),
-                h('div', { className: 'flex gap-1.5' },
-                    ['pass', 'fail', 'na'].map(res => h('button', {
-                        key: res,
-                        className: `btn btn-sm px-4 h-9 ${checklistData[idx] === res ? (res === 'pass' ? 'bg-emerald-600 text-white shadow-lg' : res === 'fail' ? 'bg-red-600 text-white shadow-lg' : 'bg-surface-600 text-white shadow-lg') : 'bg-white/5 text-surface-400'}`,
-                        onClick: () => setChecklistData(prev => ({ ...prev, [idx]: prev[idx] === res ? null : res }))
-                    }, res.toUpperCase()))
-                )
-            )),
+            h('div', { className: 'space-y-2' },
+                ...items.map((item, idx) => h('div', { key: idx, className: 'card flex items-center justify-between hover:bg-white/[0.02] transition-colors !py-3 !px-4' },
+                    h('div', { className: 'flex-1 pr-4' },
+                        h('p', { className: 'text-[10px] text-primary-500 font-bold uppercase mb-0.5' }, item.category || 'INSPECTION'),
+                        h('p', { className: 'text-sm text-white' }, (idx + 1) + '. ' + item.name)
+                    ),
+                    h('div', { className: 'flex gap-1.5' },
+                        ['pass', 'fail', 'na'].map(res => h('button', {
+                            key: res,
+                            className: `btn btn-sm px-4 h-9 ${checklistData[idx] === res ? (res === 'pass' ? 'bg-emerald-600 text-white shadow-lg' : res === 'fail' ? 'bg-red-600 text-white shadow-lg' : 'bg-gray-500 text-white') : 'bg-white/5 text-surface-400'}`,
+                            onClick: () => setChecklistData(prev => ({ ...prev, [idx]: prev[idx] === res ? null : res }))
+                        }, res.toUpperCase()))
+                    )
+                ))
+            ),
 
             h('div', { className: 'card' },
                 h('label', { className: 'block text-sm font-medium text-surface-300 mb-2' }, 'หมายเหตุตรวจสอบ'),

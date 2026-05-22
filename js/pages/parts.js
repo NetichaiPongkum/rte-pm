@@ -180,7 +180,7 @@ function PartsPage({ user, showToast }) {
     return h('div', { className: 'space-y-6 animate-fade-in' },
         h('div', { className: 'flex items-center justify-between flex-wrap gap-4' },
             h('div', null,
-                h('h2', { className: 'text-lg font-semibold text-white' }, 'ฐานข้อมูลแม่พิมพ์ (PM database)'),
+                h('h2', { className: 'text-lg font-semibold text-white' }, 'ฐานข้อมูลแม่พิมพ์ (Database)'),
                 h('p', { className: 'text-sm text-surface-400' }, vendorAccess === 'ALL' ? 'จัดการรายการแม่พิมพ์ทั้งหมด' : `รายการแม่พิมพ์ของ: ${vendorAccess}`)
             ),
             isAdmin && h('div', { className: 'flex gap-3' },

@@ -78,12 +78,13 @@ function App() {
     // Navigation items filtered by role
     const allNavItems = [
         { id: 'home',       icon: 'fa-house',       label: 'หน้าหลัก' },
-        { id: 'parts',      icon: 'fa-database',    label: 'PM database' },
+        { id: 'parts',      icon: 'fa-database',    label: 'Database' },
         { id: 'pm',         icon: 'fa-clipboard-check', label: 'PM checklist', req: 'pm' },
         { id: 'pm-history', icon: 'fa-rectangle-list',   label: 'PM summary', req: 'pm' },
         { id: 'inspection', icon: 'fa-magnifying-glass-chart', label: 'Inspection mold', req: 'inspection' },
         { id: 'inspection-history', icon: 'fa-file-signature', label: 'Inspection summary', req: 'inspection' },
         { id: 'dashboard',  icon: 'fa-chart-line',   label: 'แดชบอร์ด', req: 'dashboard' },
+        { id: 'mold-history', icon: 'fa-clock-rotate-left', label: 'Mold history', req: 'dashboard' },
         { id: 'settings',   icon: 'fa-user-gear',   label: 'จัดการผู้ใช้', adminOnly: true },
         { id: 'issues',     icon: 'fa-triangle-exclamation', label: 'แจ้งปัญหา' },
         { id: 'reports',    icon: 'fa-file-lines',   label: 'รายงาน' },
@@ -109,6 +110,7 @@ function App() {
                 case 'inspection-history': return window.InspectionHistoryPage ? h(window.InspectionHistoryPage, { user, showToast }) : h(ComponentLoading, { name: 'InspectionHistoryPage' });
                 case 'settings':   return window.SettingsPage ? h(window.SettingsPage, { user, showToast }) : h(ComponentLoading, { name: 'SettingsPage' });
                 case 'dashboard':  return window.DashboardPage ? h(window.DashboardPage, { user, showToast }) : h(ComponentLoading, { name: 'DashboardPage' });
+                case 'mold-history': return window.MoldHistoryPage ? h(window.MoldHistoryPage, { user, showToast }) : h(ComponentLoading, { name: 'MoldHistoryPage' });
                 case 'issues':     return h(PlaceholderPage, { title: 'แจ้งปัญหา', icon: 'fa-triangle-exclamation' });
                 case 'reports':    return h(PlaceholderPage, { title: 'รายงาน', icon: 'fa-file-lines' });
                 default:           return h(HomePage, { user, showToast, setCurrentPage });
