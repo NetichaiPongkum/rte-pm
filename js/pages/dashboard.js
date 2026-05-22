@@ -262,7 +262,7 @@ function DashboardPage({ user, showToast }) {
         // ── Tabs Navigation ────────────────────────────
         h('div', { className: 'flex rounded-t-xl overflow-hidden bg-surface-900/50 border-b border-surface-700 mt-4' },
             h(TabButton, { id: 'pm', label: 'PM Analytics', icon: 'fa-screwdriver-wrench' }),
-            h(TabButton, { id: 'inspection', label: 'Inspection Analytics', icon: 'fa-magnifying-glass-chart' })
+            h(TabButton, { id: 'inspection', label: 'Inspection Analytics', icon: 'fa-book-open' })
         ),
 
         // ==============================================================

@@ -152,7 +152,7 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
         }
     };
 
-    const getTypeInfo = (level) => ({ label: 'Type ' + level, icon: 'fa-microscope', color: 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' });
+    const getTypeInfo = (level) => ({ label: 'Type ' + level, icon: 'fa-book', color: 'bg-primary-600 text-white shadow-lg shadow-primary-500/20' });
 
     if (view === 'manage') {
         return h(window.InspectionTemplateManager, { showToast, onBack: () => { setView('category'); loadData(); } });
@@ -263,7 +263,7 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
                         onClick: () => { setSelectedCategory(cat); setView('level'); }
                     },
                         h('div', { className: 'w-14 h-14 rounded-2xl bg-primary-500/10 flex items-center justify-center mb-4 group-hover:bg-primary-500/20 transition-colors' },
-                            h('i', { className: 'fa-solid fa-magnifying-glass-chart text-2xl text-primary-400' })
+                            h('i', { className: 'fa-solid fa-book-open text-2xl text-primary-400' })
                         ),
                         h('h3', { className: 'text-lg font-bold text-white mb-1' }, cat.name),
                         h('p', { className: 'text-sm text-surface-500 mb-4' }, cat.description || 'การตรวจสอบคุณภาพและสภาพแม่พิมพ์'),

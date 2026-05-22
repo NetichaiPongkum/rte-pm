@@ -177,7 +177,7 @@ function InspectionHistoryPage({ user, showToast }) {
         }
     };
 
-    const getTypeInfo = (id) => ({ label: 'Type ' + id, icon: 'fa-microscope', color: 'from-primary-500 to-primary-600' });
+    const getTypeInfo = (id) => ({ label: 'Type ' + id, icon: 'fa-book', color: 'from-primary-500 to-primary-600' });
 
     const filteredRecords = records.filter(r => {
         const matchesSearch = (r.mold_code || '').toLowerCase().includes(searchTerm.toLowerCase()) || 

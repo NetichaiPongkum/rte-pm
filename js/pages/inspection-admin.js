@@ -3,7 +3,7 @@
 // ==========================================
 
 const INSPECTION_TYPES = [
-    { id: 1,    label: 'Standard', icon: 'fa-microscope', color: 'bg-primary-500/10 text-primary-400' },
+    { id: 1,    label: 'Standard', icon: 'fa-book', color: 'bg-primary-500/10 text-primary-400' },
     { id: 2,    label: 'Critical', icon: 'fa-shield-halved', color: 'bg-amber-500/10 text-amber-400' },
     { id: 3,    label: 'Full Set', icon: 'fa-list-check', color: 'bg-emerald-500/10 text-emerald-400' },
 ];

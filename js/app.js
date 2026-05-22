@@ -81,7 +81,7 @@ function App() {
         { id: 'parts',      icon: 'fa-database',    label: 'Database' },
         { id: 'pm',         icon: 'fa-clipboard-check', label: 'PM checklist', req: 'pm' },
         { id: 'pm-history', icon: 'fa-rectangle-list',   label: 'PM summary', req: 'pm' },
-        { id: 'inspection', icon: 'fa-magnifying-glass-chart', label: 'Inspection mold', req: 'inspection' },
+        { id: 'inspection', icon: 'fa-book-open', label: 'Inspection mold', req: 'inspection' },
         { id: 'inspection-history', icon: 'fa-file-signature', label: 'Inspection summary', req: 'inspection' },
         { id: 'dashboard',  icon: 'fa-chart-line',   label: 'แดชบอร์ด', req: 'dashboard' },
         { id: 'mold-history', icon: 'fa-clock-rotate-left', label: 'Mold history', req: 'dashboard' },
@@ -313,7 +313,7 @@ function HomePage({ user, showToast, setCurrentPage }) {
                     { icon: 'fa-cubes',           title: 'ฐานข้อมูลแม่พิมพ์', desc: 'ค้นหาและเลือกแม่พิมพ์',       page: 'parts' },
                     { icon: 'fa-clipboard-check', title: 'PM checklist',   desc: 'เลือกเทมเพลตและเริ่มตรวจเช็ค', page: 'pm', req: 'pm' },
                     { icon: 'fa-rectangle-list',   title: 'PM summary',      desc: 'ดูประวัติการตรวจสอบทั้งหมด',     page: 'pm-history', req: 'pm' },
-                    { icon: 'fa-magnifying-glass-chart', title: 'Inspection mold', desc: 'ลงบันทึกการตรวจสอบชิ้นงาน/แม่พิมพ์', page: 'inspection', req: 'inspection' },
+                    { icon: 'fa-book-open', title: 'Inspection mold', desc: 'ลงบันทึกการตรวจสอบชิ้นงาน/แม่พิมพ์', page: 'inspection', req: 'inspection' },
                     { icon: 'fa-file-signature', title: 'Inspection summary', desc: 'สรุปผลการตรวจสอบชิ้นงาน',     page: 'inspection-history', req: 'inspection' },
                 ].filter(action => {
                     if (action.req === 'pm' && user && user.can_access_pm === false) return false;

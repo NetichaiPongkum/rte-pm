@@ -506,7 +506,7 @@ function MoldHistoryPage({ user, showToast }) {
                 }, h('i', { className: 'fa-solid fa-file-excel mr-2' }), 'Excel Summary (PM)'),
                 h('div', { className: 'w-px h-6 bg-white/10 self-center mx-2' }),
                 h('div', { className: 'flex items-center gap-2 mr-2' },
-                    h('i', { className: 'fa-solid fa-magnifying-glass-chart text-cyan-400 text-xs' }),
+                    h('i', { className: 'fa-solid fa-book-open text-cyan-400 text-xs' }),
                     h('span', { className: 'text-xs font-bold text-cyan-400 uppercase' }, 'Inspection Report:')
                 ),
                 h('button', {
@@ -566,7 +566,7 @@ function MoldHistoryPage({ user, showToast }) {
                 h('div', { className: 'card p-0 overflow-hidden flex flex-col h-[600px]' },
                     h('div', { className: 'p-4 border-b border-white/5 bg-surface-900/50 flex justify-between items-center' },
                         h('div', { className: 'flex items-center gap-2 text-cyan-400' },
-                            h('i', { className: 'fa-solid fa-magnifying-glass-chart' }),
+                            h('i', { className: 'fa-solid fa-book-open' }),
                             h('h3', { className: 'font-bold' }, 'Inspection History')
                         ),
                         h('span', { className: 'text-xs text-surface-400 font-semibold' }, inspRecords.length + ' records')
