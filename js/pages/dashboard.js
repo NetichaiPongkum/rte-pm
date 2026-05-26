@@ -422,67 +422,7 @@ function DashboardPage({ user, showToast }) {
                 h(KPICard, { label: 'ไอเท็มที่ไม่ผ่าน', value: pmStats.fail, sub: 'ไอเท็มย่อย (Items)', icon: 'fa-triangle-exclamation', color: 'text-rose-400', bg: 'bg-rose-500/10' })
             ),
 
-            // ── PM Yearly Row ──
-            h('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-1 border-b border-white/5 pb-2' },
-                h('div', { className: 'flex items-center gap-2' },
-                    h('i', { className: 'fa-solid fa-calendar-check text-indigo-400' }),
-                    h('h3', { className: 'text-base font-bold text-surface-200' }, `ภาพรวมการตรวจสอบ PM รายปี (${pmYearlyYear})`)
-                ),
-                h('div', { className: 'flex items-center gap-3' },
-                    h('span', { className: 'text-xs text-surface-400 font-medium' }, 'เลือกปี:'),
-                    h('select', {
-                        className: 'input text-xs py-1 px-2 border border-white/10 bg-surface-900 rounded-md font-semibold text-white w-24',
-                        value: pmYearlyYear,
-                        onChange: e => setPmYearlyYear(e.target.value)
-                    }, ['2023','2024','2025','2026','2027'].map(y => h('option', { key: y, value: y }, y))),
-                    h('button', {
-                        className: 'btn btn-secondary btn-xs flex items-center gap-1.5 px-3 py-1 bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 rounded-md transition-all font-semibold',
-                        onClick: () => setShowPmYearlyModal(true)
-                    }, h('i', { className: 'fa-solid fa-expand' }), 'แสดงหน้าต่างแยก')
-                )
-            ),
-            h('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-6' },
-                // Trend Line
-                h('div', { className: 'card lg:col-span-2 shadow-sm' },
-                    h(SectionHeader, { title: `แนวโน้มการทำ PM (Pass vs Fail) ปี ${pmYearlyYear}`, icon: 'fa-chart-area', color: 'text-indigo-400' }),
-                    pmYearlyTrendDataFormatted.length === 0
-                        ? h('div', { className: 'flex items-center justify-center h-56 text-surface-500 text-sm' }, 'ไม่มีข้อมูลในช่วงปีนี้')
-                        : h(ResponsiveContainer, { width: '100%', height: 260 },
-                            h(LineChart, { data: pmYearlyTrendDataFormatted, margin: { top: 10, right: 10, left: -20, bottom: 5 } },
-                                h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', vertical: false }),
-                                h(XAxis, { dataKey: 'label', tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false, dy: 10 }),
-                                h(YAxis, { tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
-                                h(Tooltip, tooltipConfig),
-                                h(Legend, { wrapperStyle: { fontSize: '12px', paddingTop: '10px' } }),
-                                h(Line, { type: 'monotone', dataKey: 'pass', name: 'Pass Items', stroke: '#10b981', strokeWidth: 3, dot: { r: 3, fill: '#10b981' }, activeDot: { r: 5 } }),
-                                h(Line, { type: 'monotone', dataKey: 'fail', name: 'Fail Items', stroke: '#f43f5e', strokeWidth: 3, dot: { r: 3, fill: '#f43f5e' }, activeDot: { r: 5 } })
-                            )
-                        )
-                ),
-                // Pie Chart
-                h('div', { className: 'card shadow-sm flex flex-col' },
-                    h(SectionHeader, { title: `สัดส่วนผลการตรวจ PM ปี ${pmYearlyYear}`, icon: 'fa-chart-pie', color: 'text-indigo-400' }),
-                    pmYearlyPieData.length === 0
-                        ? h('div', { className: 'flex-1 flex items-center justify-center text-surface-500 text-sm min-h-[200px]' }, 'ไม่มีข้อมูล')
-                        : h(React.Fragment, null,
-                            h('div', { className: 'flex-1 min-h-[200px]' },
-                                h(ResponsiveContainer, { width: '100%', height: '100%' },
-                                    h(PieChart, null,
-                                        h(Pie, { data: pmYearlyPieData, cx: '50%', cy: '50%', innerRadius: 55, outerRadius: 85, paddingAngle: 5, dataKey: 'value' },
-                                            pmYearlyPieData.map((_, i) => h(Cell, { key: i, fill: COLORS[i] }))
-                                        ),
-                                        h(Tooltip, tooltipConfig)
-                                    )
-                                )
-                            ),
-                            h('div', { className: 'grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/5' },
-                                h('div', { className: 'text-center' }, h('p', { className: 'text-emerald-400 font-bold text-lg' }, pmYearlyStats.pass), h('p', { className: 'text-xs text-surface-500' }, 'Pass')),
-                                h('div', { className: 'text-center border-x border-white/5' }, h('p', { className: 'text-rose-400 font-bold text-lg' }, pmYearlyStats.fail), h('p', { className: 'text-xs text-surface-500' }, 'Fail')),
-                                h('div', { className: 'text-center' }, h('p', { className: 'text-surface-400 font-bold text-lg' }, pmYearlyStats.na), h('p', { className: 'text-xs text-surface-500' }, 'N/A'))
-                            )
-                        )
-                )
-            ),
+
 
             // ── PM Charts Row 2 ──
             h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },
@@ -567,67 +507,7 @@ function DashboardPage({ user, showToast }) {
                 h(KPICard, { label: 'ไอเท็มที่ไม่ผ่าน', value: inspStats.fail, sub: 'ไอเท็มย่อย (Items)', icon: 'fa-triangle-exclamation', color: 'text-rose-400', bg: 'bg-rose-500/10' })
             ),
 
-            // ── Inspection Yearly Row ──
-            h('div', { className: 'flex flex-col md:flex-row md:items-center justify-between gap-4 mt-2 mb-1 border-b border-white/5 pb-2' },
-                h('div', { className: 'flex items-center gap-2' },
-                    h('i', { className: 'fa-solid fa-calendar-check text-cyan-400' }),
-                    h('h3', { className: 'text-base font-bold text-surface-200' }, `ภาพรวมการตรวจสอบ Inspection รายปี (${inspYearlyYear})`)
-                ),
-                h('div', { className: 'flex items-center gap-3' },
-                    h('span', { className: 'text-xs text-surface-400 font-medium' }, 'เลือกปี:'),
-                    h('select', {
-                        className: 'input text-xs py-1 px-2 border border-white/10 bg-surface-900 rounded-md font-semibold text-white w-24',
-                        value: inspYearlyYear,
-                        onChange: e => setInspYearlyYear(e.target.value)
-                    }, ['2023','2024','2025','2026','2027'].map(y => h('option', { key: y, value: y }, y))),
-                    h('button', {
-                        className: 'btn btn-secondary btn-xs flex items-center gap-1.5 px-3 py-1 bg-cyan-500/20 text-cyan-300 hover:bg-cyan-500/30 border border-cyan-500/30 rounded-md transition-all font-semibold',
-                        onClick: () => setShowInspYearlyModal(true)
-                    }, h('i', { className: 'fa-solid fa-expand' }), 'แสดงหน้าต่างแยก')
-                )
-            ),
-            h('div', { className: 'grid grid-cols-1 lg:grid-cols-3 gap-6' },
-                // Trend Line
-                h('div', { className: 'card lg:col-span-2 shadow-sm' },
-                    h(SectionHeader, { title: `แนวโน้มการ Inspection (Pass vs Fail) ปี ${inspYearlyYear}`, icon: 'fa-chart-area', color: 'text-cyan-400' }),
-                    inspYearlyTrendDataFormatted.length === 0
-                        ? h('div', { className: 'flex items-center justify-center h-56 text-surface-500 text-sm' }, 'ไม่มีข้อมูลในช่วงปีนี้')
-                        : h(ResponsiveContainer, { width: '100%', height: 260 },
-                            h(LineChart, { data: inspYearlyTrendDataFormatted, margin: { top: 10, right: 10, left: -20, bottom: 5 } },
-                                h(CartesianGrid, { strokeDasharray: '3 3', stroke: 'rgba(255,255,255,0.05)', vertical: false }),
-                                h(XAxis, { dataKey: 'label', tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false, dy: 10 }),
-                                h(YAxis, { tick: { fill: '#94a3b8', fontSize: 11 }, axisLine: false, tickLine: false }),
-                                h(Tooltip, tooltipConfig),
-                                h(Legend, { wrapperStyle: { fontSize: '12px', paddingTop: '10px' } }),
-                                h(Line, { type: 'monotone', dataKey: 'pass', name: 'Pass Items', stroke: '#10b981', strokeWidth: 3, dot: { r: 3, fill: '#10b981' }, activeDot: { r: 5 } }),
-                                h(Line, { type: 'monotone', dataKey: 'fail', name: 'Fail Items', stroke: '#f43f5e', strokeWidth: 3, dot: { r: 3, fill: '#f43f5e' }, activeDot: { r: 5 } })
-                            )
-                        )
-                ),
-                // Pie Chart
-                h('div', { className: 'card shadow-sm flex flex-col' },
-                    h(SectionHeader, { title: `สัดส่วนผลการ Inspection ปี ${inspYearlyYear}`, icon: 'fa-chart-pie', color: 'text-cyan-400' }),
-                    inspYearlyPieData.length === 0
-                        ? h('div', { className: 'flex-1 flex items-center justify-center text-surface-500 text-sm min-h-[200px]' }, 'ไม่มีข้อมูล')
-                        : h(React.Fragment, null,
-                            h('div', { className: 'flex-1 min-h-[200px]' },
-                                h(ResponsiveContainer, { width: '100%', height: '100%' },
-                                    h(PieChart, null,
-                                        h(Pie, { data: inspYearlyPieData, cx: '50%', cy: '50%', innerRadius: 55, outerRadius: 85, paddingAngle: 5, dataKey: 'value' },
-                                            inspYearlyPieData.map((_, i) => h(Cell, { key: i, fill: COLORS[i] }))
-                                        ),
-                                        h(Tooltip, tooltipConfig)
-                                    )
-                                )
-                            ),
-                            h('div', { className: 'grid grid-cols-3 gap-2 mt-4 pt-4 border-t border-white/5' },
-                                h('div', { className: 'text-center' }, h('p', { className: 'text-emerald-400 font-bold text-lg' }, inspYearlyStats.pass), h('p', { className: 'text-xs text-surface-500' }, 'Pass')),
-                                h('div', { className: 'text-center border-x border-white/5' }, h('p', { className: 'text-rose-400 font-bold text-lg' }, inspYearlyStats.fail), h('p', { className: 'text-xs text-surface-500' }, 'Fail')),
-                                h('div', { className: 'text-center' }, h('p', { className: 'text-surface-400 font-bold text-lg' }, inspYearlyStats.na), h('p', { className: 'text-xs text-surface-500' }, 'N/A'))
-                            )
-                        )
-                )
-            ),
+
 
             // ── Insp Charts Row 2 ──
             h('div', { className: 'grid grid-cols-1 lg:grid-cols-2 gap-6' },

@@ -145,7 +145,9 @@ function ChecklistPage({ user, showToast, setCurrentPage, selectedMold, clearSel
 
             showToast('บันทึกผลตรวจสอบสำเร็จ', 'success');
             if (clearSelectedMold) clearSelectedMold();
-            setCurrentPage('pm-history');
+            setMoldCode('');
+            setMoldInfo({ name: '', vendor: '', dwg: '' });
+            startChecklist(selectedTemplate);
         } catch (err) {
             showToast('บันทึกล้มเหลว', 'error');
         } finally {

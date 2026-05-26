@@ -257,112 +257,80 @@ function MoldHistoryPage({ user, showToast }) {
         const prefix = isPm ? 'RTE-PM' : 'RTE-INSP';
 
         const rows = records.map((r, idx) => `
-            <tr style="background:${idx%2===0?'#fff':'#f9fafb'};">
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${idx+1}</td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;white-space:nowrap;">${r.performed_date||'-'}</td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;font-weight:600;color:#4f46e5;">${r.doc_no||'-'}</td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${r.category_name||'-'}</td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${isPm?'Level '+(r.pm_level||1):'Type '+(r.pm_level||1)}</td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${getDisplayVendor(r) || '-'}</td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">${r.performed_by||'-'}</td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">
-                    ${(r.checklist_data||[]).filter(i=>i.result==='pass').length} / ${(r.checklist_data||[]).length}
-                </td>
-                <td style="padding:5px 8px;border:1px solid #ddd;font-size:9px;">
-                    <span style="font-weight:bold;color:${(r.checklist_data||[]).some(i=>i.result==='fail')?'#dc2626':'#16a34a'};">
-                        ${(r.checklist_data||[]).some(i=>i.result==='fail')?'FAIL':'PASS'}
-                    </span>
-                </td>
+            <tr style="background:${idx%2===0?'#fff':'#fafafa'};">
+                <td style="padding:6px 8px;border:1px solid #d1d5db;font-size:9px;text-align:center;">${idx+1}</td>
+                <td style="padding:6px 8px;border:1px solid #d1d5db;font-size:9px;white-space:nowrap;text-align:center;">${r.performed_date||'-'}</td>
+                <td style="padding:6px 8px;border:1px solid #d1d5db;font-size:9px;font-weight:600;color:#111;">${r.doc_no||'-'}</td>
+                <td style="padding:6px 8px;border:1px solid #d1d5db;font-size:9px;">${r.category_name||'-'}</td>
+                <td style="padding:6px 8px;border:1px solid #d1d5db;font-size:9px;text-align:center;">${isPm?'Level '+(r.pm_level||1):'Type '+(r.pm_level||1)}</td>
+                <td style="padding:6px 8px;border:1px solid #d1d5db;font-size:9px;">${getDisplayVendor(r) || '-'}</td>
+                <td style="padding:6px 8px;border:1px solid #d1d5db;font-size:9px;">${r.performed_by||'-'}</td>
             </tr>`).join('');
 
-        const passCount = records.filter(r => !(r.checklist_data||[]).some(i=>i.result==='fail')).length;
-        const failCount = records.length - passCount;
         const today = new Date().toLocaleDateString('th-TH', { year:'numeric', month:'long', day:'numeric' });
 
         const container = document.createElement('div');
         container.style.cssText = 'position:absolute;left:-9999px;top:0;';
         container.innerHTML = `
-        <div id="pdf-summary-content" style="padding:30px 40px;font-family:'Inter','Noto Sans Thai',sans-serif;color:#1a1a1a;font-size:10px;width:1122px;min-height:794px;box-sizing:border-box;background:white;position:relative;">
+        <div id="pdf-summary-content" style="padding:40px;font-family:'Inter','Noto Sans Thai',sans-serif;color:#1a1a1a;font-size:10px;width:794px;min-height:1122px;box-sizing:border-box;background:white;position:relative;display:flex;flex-direction:column;">
             <!-- Header -->
-            <div style="display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #4f46e5;padding-bottom:12px;margin-bottom:16px;">
+            <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #111;padding-bottom:12px;margin-bottom:20px;">
                 <div>
-                    <div style="font-size:8px;color:#4f46e5;font-weight:700;letter-spacing:2px;margin-bottom:4px;">PM MOLD RTE SYSTEM</div>
-                    <h1 style="margin:0;font-size:20px;color:#000;font-weight:900;">${label}</h1>
-                    <p style="margin:4px 0 0;color:#666;font-size:10px;">สรุปประวัติการ${isPm?'บำรุงรักษา':'ตรวจสอบ'}แม่พิมพ์ทั้งหมด</p>
+                    <h1 style="margin:0;font-size:22px;color:#000;font-weight:800;text-transform:uppercase;">${label}</h1>
+                    <p style="margin:4px 0 0;color:#555;font-size:11px;">สรุปประวัติการ${isPm?'บำรุงรักษา':'ตรวจสอบ'}แม่พิมพ์ทั้งหมด</p>
                 </div>
                 <div style="text-align:right;">
-                    <div style="font-size:9px;color:#666;">วันที่พิมพ์ / Print Date</div>
-                    <div style="font-weight:bold;font-size:11px;">${today}</div>
+                    <div style="font-size:10px;color:#555;margin-bottom:2px;">วันที่พิมพ์ / Print Date</div>
+                    <div style="font-weight:bold;font-size:12px;color:#111;">${today}</div>
                 </div>
             </div>
-            <!-- Mold Info -->
-            <div style="background:#f0f0ff;border:1px solid #c7d2fe;border-radius:6px;padding:12px 16px;margin-bottom:16px;display:flex;gap:40px;">
-                <div>
-                    <div style="font-size:8px;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Mold Code / รหัสแม่พิมพ์</div>
-                    <div style="font-size:18px;font-weight:900;color:#000;">${selectedMold?.mold_code||'-'}</div>
+            <!-- Mold Info (Professional Clean) -->
+            <div style="display:flex;flex-wrap:wrap;gap:20px;margin-bottom:24px;padding:12px 16px;background:#f9fafb;border:1px solid #e5e7eb;">
+                <div style="min-width:140px;">
+                    <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Mold Code / รหัสแม่พิมพ์</div>
+                    <div style="font-size:16px;font-weight:800;color:#111;">${selectedMold?.mold_code||'-'}</div>
                 </div>
-                <div>
-                    <div style="font-size:8px;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Mold Name / ชื่อแม่พิมพ์</div>
-                    <div style="font-size:14px;font-weight:700;color:#1e1b4b;">${selectedMold?.mold_name||'-'}</div>
+                <div style="flex:1;min-width:150px;">
+                    <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Mold Name / ชื่อแม่พิมพ์</div>
+                    <div style="font-size:13px;font-weight:700;color:#111;">${selectedMold?.mold_name||'-'}</div>
                 </div>
-                <div>
-                    <div style="font-size:8px;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:2px;">DWG / Part</div>
+                <div style="min-width:120px;">
+                    <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:4px;">DWG / Part</div>
                     <div style="font-size:12px;font-weight:600;color:#333;">${selectedMold?.dwg_part1||'-'}</div>
                 </div>
-                <div>
-                    <div style="font-size:8px;color:#6366f1;font-weight:700;text-transform:uppercase;margin-bottom:2px;">Vendor</div>
+                <div style="min-width:120px;">
+                    <div style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;margin-bottom:4px;">Vendor</div>
                     <div style="font-size:12px;font-weight:600;color:#333;">${selectedMold?.vendor||'-'}</div>
-                </div>
-            </div>
-            <!-- Stats -->
-            <div style="display:flex;gap:12px;margin-bottom:16px;">
-                <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;text-align:center;">
-                    <div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase;">Total Records</div>
-                    <div style="font-size:24px;font-weight:900;color:#4f46e5;">${records.length}</div>
-                </div>
-                <div style="flex:1;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:10px 14px;text-align:center;">
-                    <div style="font-size:8px;color:#16a34a;font-weight:700;text-transform:uppercase;">Pass</div>
-                    <div style="font-size:24px;font-weight:900;color:#16a34a;">${passCount}</div>
-                </div>
-                <div style="flex:1;background:#fef2f2;border:1px solid #fecaca;border-radius:6px;padding:10px 14px;text-align:center;">
-                    <div style="font-size:8px;color:#dc2626;font-weight:700;text-transform:uppercase;">Fail</div>
-                    <div style="font-size:24px;font-weight:900;color:#dc2626;">${failCount}</div>
-                </div>
-                <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px 14px;text-align:center;">
-                    <div style="font-size:8px;color:#64748b;font-weight:700;text-transform:uppercase;">Pass Rate</div>
-                    <div style="font-size:24px;font-weight:900;color:#0891b2;">${records.length?Math.round(passCount/records.length*100):0}%</div>
                 </div>
             </div>
             <!-- Table -->
             <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
                 <thead>
-                    <tr style="background:#4f46e5;">
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">#</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Date</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Doc No.</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Category</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Level</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Vendor</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:left;">Performed By</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:center;">Pass/Total</th>
-                        <th style="padding:7px 8px;border:1px solid #4f46e5;font-size:9px;color:#fff;text-align:center;">Status</th>
+                    <tr style="background:#f3f4f6;">
+                        <th style="padding:8px;border:1px solid #d1d5db;font-size:10px;color:#111;text-align:center;font-weight:700;width:30px;">#</th>
+                        <th style="padding:8px;border:1px solid #d1d5db;font-size:10px;color:#111;text-align:center;font-weight:700;width:70px;">Date</th>
+                        <th style="padding:8px;border:1px solid #d1d5db;font-size:10px;color:#111;text-align:left;font-weight:700;">Doc No.</th>
+                        <th style="padding:8px;border:1px solid #d1d5db;font-size:10px;color:#111;text-align:left;font-weight:700;">Category</th>
+                        <th style="padding:8px;border:1px solid #d1d5db;font-size:10px;color:#111;text-align:center;font-weight:700;width:60px;">Level</th>
+                        <th style="padding:8px;border:1px solid #d1d5db;font-size:10px;color:#111;text-align:left;font-weight:700;">Vendor</th>
+                        <th style="padding:8px;border:1px solid #d1d5db;font-size:10px;color:#111;text-align:left;font-weight:700;">Performed By</th>
                     </tr>
                 </thead>
                 <tbody>${rows}</tbody>
             </table>
             <!-- Signatures -->
-            <div style="display:flex;justify-content:space-between;gap:60px;margin-top:20px;">
-                <div style="flex:1;border-top:1px solid #000;text-align:center;padding-top:5px;font-size:10px;">
-                    <p style="margin-bottom:30px;">Prepared By (ผู้จัดทำ)</p>
-                    <p style="font-size:8px;color:#666;">Date: ____/____/____</p>
+            <div style="display:flex;justify-content:space-between;gap:40px;margin-top:auto;padding-top:60px;page-break-inside:avoid;">
+                <div style="flex:1;border-top:1px solid #333;text-align:center;padding-top:8px;font-size:11px;">
+                    <p style="margin-bottom:40px;font-weight:600;">Prepared By (ผู้จัดทำ)</p>
+                    <p style="font-size:9px;color:#555;">Date: ____/____/____</p>
                 </div>
-                <div style="flex:1;border-top:1px solid #000;text-align:center;padding-top:5px;font-size:10px;">
-                    <p style="margin-bottom:30px;">Reviewed By (ผู้ตรวจสอบ)</p>
-                    <p style="font-size:8px;color:#666;">Date: ____/____/____</p>
+                <div style="flex:1;border-top:1px solid #333;text-align:center;padding-top:8px;font-size:11px;">
+                    <p style="margin-bottom:40px;font-weight:600;">Reviewed By (ผู้ตรวจสอบ)</p>
+                    <p style="font-size:9px;color:#555;">Date: ____/____/____</p>
                 </div>
-                <div style="flex:1;border-top:1px solid #000;text-align:center;padding-top:5px;font-size:10px;">
-                    <p style="margin-bottom:30px;">Approved By (ผู้อนุมัติ)</p>
-                    <p style="font-size:8px;color:#666;">Date: ____/____/____</p>
+                <div style="flex:1;border-top:1px solid #333;text-align:center;padding-top:8px;font-size:11px;">
+                    <p style="margin-bottom:40px;font-weight:600;">Approved By (ผู้อนุมัติ)</p>
+                    <p style="font-size:9px;color:#555;">Date: ____/____/____</p>
                 </div>
             </div>
         </div>`;
@@ -373,7 +341,7 @@ function MoldHistoryPage({ user, showToast }) {
             filename: `${isPm?'PM':'INSP'}_Summary_${selectedMold?.mold_code}_${new Date().toISOString().split('T')[0]}.pdf`,
             image: { type: 'jpeg', quality: 1 },
             html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
         showToast('กำลังสร้าง PDF สรุป...', 'info');
         window.html2pdf().set(opt).from(el).save().then(() => {

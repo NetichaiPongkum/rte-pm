@@ -265,12 +265,7 @@ function ToastContainer({ toasts }) {
 // ==========================================
 function HomePage({ user, showToast, setCurrentPage }) {
     const h = React.createElement;
-    const stats = [
-        { label: 'แม่พิมพ์ทั้งหมด', value: '—', icon: 'fa-cubes',    color: 'bg-primary-500/10 text-primary-400' },
-        { label: 'PM รอดำเนินการ',  value: '—', icon: 'fa-clock',    color: 'bg-amber-500/10 text-amber-400' },
-        { label: 'ปัญหาที่เปิดอยู่',  value: '—', icon: 'fa-bug',      color: 'bg-red-500/10 text-red-400' },
-        { label: 'เสร็จสิ้นเดือนนี้',  value: '—', icon: 'fa-check',    color: 'bg-emerald-500/10 text-emerald-400' },
-    ];
+
 
     return h('div', { className: 'space-y-6 animate-fade-in' },
         // Welcome Banner
@@ -286,21 +281,7 @@ function HomePage({ user, showToast, setCurrentPage }) {
             )
         ),
 
-        // Stats Grid
-        h('div', { className: 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4' },
-            stats.map((stat, i) =>
-                h('div', { key: i, className: `card stagger-${i + 1} animate-slide-up hover:border-surface-600` },
-                    h('div', { className: 'flex items-center justify-between mb-3' },
-                        h('span', { className: 'text-xs text-surface-500 font-semibold uppercase tracking-wider' }, stat.label),
-                        h('div', { className: `w-9 h-9 rounded-md ${stat.color} flex items-center justify-center` },
-                            h('i', { className: `fa-solid ${stat.icon} text-sm` })
-                        )
-                    ),
-                    h('p', { className: 'text-2xl font-bold text-white' }, stat.value),
-                    h('p', { className: 'text-[10px] text-surface-600 mt-1 uppercase' }, 'No data connected')
-                )
-            )
-        ),
+
 
         // Quick Actions
         h('div', { className: 'card' },

@@ -144,7 +144,9 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
 
             showToast('บันทึกผลตรวจสอบสำเร็จ', 'success');
             if (clearSelectedMold) clearSelectedMold();
-            setCurrentPage('inspection-history');
+            setMoldCode('');
+            setMoldInfo({ name: '', vendor: '', dwg: '' });
+            startChecklist(selectedTemplate);
         } catch (err) {
             showToast('บันทึกล้มเหลว', 'error');
         } finally {

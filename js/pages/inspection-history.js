@@ -438,7 +438,10 @@ function InspectionHistoryPage({ user, showToast }) {
                                     return h('tr', { 
                                         key: r.id, 
                                         className: 'animate-slide-up cursor-pointer hover:bg-primary-500/5', 
-                                        onClick: () => setSelectedRecord(r)
+                                        onClick: () => {
+                                            if (window.getSelection().toString().length > 0) return;
+                                            setSelectedRecord(r);
+                                        }
                                     },
                                         h('td', { className: 'whitespace-nowrap' }, h('span', { className: 'text-xs' }, r.performed_date || '-')),
                                         h('td', null, h('span', { className: 'font-bold text-primary-400' }, r.mold_code)),

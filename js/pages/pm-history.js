@@ -485,15 +485,15 @@ function PMHistoryPage({ user, showToast }) {
                                         key: r.id, 
                                         className: 'animate-slide-up cursor-pointer hover:bg-primary-500/5 transition-colors', 
                                         style: { animationDelay: (i * 30) + 'ms' },
-                                        onClick: () => setSelectedRecord(r)
+                                        onClick: () => {
+                                            if (window.getSelection().toString().length > 0) return;
+                                            setSelectedRecord(r);
+                                        }
                                     },
                                         h('td', { className: 'whitespace-nowrap' }, h('span', { className: 'text-xs' }, r.performed_date || '-')),
                                         h('td', null, h('span', { className: 'font-bold text-primary-400' }, r.mold_code)),
                                         h('td', null, 
-                                            h('div', null,
-                                                h('p', { className: 'text-xs text-white' }, r.mold_name || '-'),
-                                                h('p', { className: 'text-[10px] text-surface-400' }, r.part_name && r.part_name !== '-' ? r.part_name : '')
-                                            )
+                                            h('p', { className: 'text-xs text-white' }, r.mold_name || '-')
                                         ),
                                         h('td', null, 
                                             h('div', null,
