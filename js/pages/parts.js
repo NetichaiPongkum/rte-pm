@@ -16,18 +16,48 @@ function PartsPage({ user, showToast }) {
         mold_name: '',
         dwg_part1: '',
         part_name: '',
-        vendor: '',
-        machine_no: '',
-        cavity: '',
-        mold_type: '2-plate'
+        vendor: ''
     });
+    const [vendorsList, setVendorsList] = React.useState([]);
 
     const isAdmin = user && user.role === 'admin';
     const vendorAccess = user?.vendor_access || 'ALL';
 
     React.useEffect(() => {
         loadMolds();
+        loadVendors();
     }, [vendorAccess]);
+
+    const loadVendors = async () => {
+        try {
+            if (window.supabaseClient) {
+                const { data, error } = await window.supabaseClient.from('vendors').select('name').order('name');
+                if (!error && data) {
+                    setVendorsList(data.map(v => v.name).filter(Boolean));
+                    return;
+                }
+                
+                // Fallback to mold_master unique vendors
+                const { data: moldData, error: moldError } = await window.supabaseClient.from('mold_master').select('vendor');
+                if (!moldError && moldData) {
+                    const unique = [...new Set(moldData.map(m => m.vendor).filter(Boolean))].sort();
+                    setVendorsList(unique);
+                    return;
+                }
+            }
+
+            // LocalStorage fallback
+            const local = JSON.parse(localStorage.getItem('demo_vendors') || '[]');
+            if (local.length > 0) {
+                setVendorsList(local);
+            } else {
+                setVendorsList(['SPP', 'RMC', 'RTE']);
+            }
+        } catch (err) {
+            console.error('Load vendors list error in parts:', err);
+            setVendorsList(['SPP', 'RMC', 'RTE']);
+        }
+    };
 
     const loadMolds = async () => {
         setLoading(true);
@@ -117,10 +147,7 @@ function PartsPage({ user, showToast }) {
                     mold_name: row['NAME MOLD'] || row['mold_name'] || row['Name'],
                     dwg_part1: row['DWG PART'] || row['DWG PART 1'] || row['dwg_part1'] || row['DWG.'],
                     part_name: row['PART NAME'] || row['part_name'] || '',
-                    vendor: row['VENDOR'] || row['VENDER INJ'] || row['vendor'] || row['Vendor'] || 'SPP',
-                    machine_no: row['M/C (TON)'] || row['machine_no'] || '',
-                    cavity: parseInt(row['CAV'] || row['cavity'] || '0'),
-                    mold_type: row['MOLD TYPE'] || '2-plate'
+                    vendor: row['VENDOR'] || row['VENDER INJ'] || row['vendor'] || row['Vendor'] || 'SPP'
                 })).filter(row => row.mold_code);
 
                 if (data.length === 0) {
@@ -159,7 +186,7 @@ function PartsPage({ user, showToast }) {
             setFormData({ ...mold });
             setEditingId(mold.id);
         } else {
-            setFormData({ mold_code: '', mold_name: '', dwg_part1: '', part_name: '', vendor: '', machine_no: '', cavity: '', mold_type: '2-plate' });
+            setFormData({ mold_code: '', mold_name: '', dwg_part1: '', part_name: '', vendor: '' });
             setEditingId(null);
         }
         setShowModal(true);
@@ -269,21 +296,16 @@ function PartsPage({ user, showToast }) {
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'PART NAME'),
                         h('input', { className: 'input', value: formData.part_name || '', onChange: e => setFormData({...formData, part_name: e.target.value}) })
                     ),
-                    h('div', null,
+                    h('div', { className: 'col-span-2' },
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'VENDOR'),
-                        h('input', { className: 'input', value: formData.vendor || '', onChange: e => setFormData({...formData, vendor: e.target.value}) })
-                    ),
-                    h('div', null,
-                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'CAV'),
-                        h('input', { type: 'number', className: 'input', value: formData.cavity || '', onChange: e => setFormData({...formData, cavity: e.target.value}) })
-                    ),
-                    h('div', null,
-                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'M/C (TON)'),
-                        h('input', { className: 'input', value: formData.machine_no || '', onChange: e => setFormData({...formData, machine_no: e.target.value}) })
-                    ),
-                    h('div', null,
-                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'MOLD TYPE'),
-                        h('input', { className: 'input', value: formData.mold_type || '', onChange: e => setFormData({...formData, mold_type: e.target.value}) })
+                        h('select', { 
+                            className: 'input w-full', 
+                            value: formData.vendor || '', 
+                            onChange: e => setFormData({...formData, vendor: e.target.value}) 
+                        },
+                            h('option', { value: '' }, '-- เลือก Vendor --'),
+                            vendorsList.map(v => h('option', { key: v, value: v }, v))
+                        )
                     ),
                 ),
                 h('div', { className: 'flex justify-end gap-3 mt-8' },

@@ -19,28 +19,98 @@ function SettingsPage({ user, showToast }) {
         can_access_dashboard: true
     });
     const [availableVendors, setAvailableVendors] = React.useState([]);
+    const [vendors, setVendors] = React.useState([]);
+    const [newVendor, setNewVendor] = React.useState('');
 
     const isAdmin = user && user.role === 'admin';
 
     React.useEffect(() => {
         if (isAdmin) {
             loadUsers();
-            loadVendors();
+            loadVendorsList();
         }
     }, []);
 
-    const loadVendors = async () => {
+    const loadVendorsList = async () => {
         try {
             if (window.supabaseClient) {
-                const { data, error } = await window.supabaseClient.from('mold_master').select('vendor');
-                if (error) throw error;
-                const unique = [...new Set(data.map(m => m.vendor).filter(Boolean))].sort();
-                setAvailableVendors(unique);
+                const { data, error } = await window.supabaseClient.from('vendors').select('*').order('name');
+                if (!error && data) {
+                    setVendors(data);
+                    setAvailableVendors(data.map(v => v.name).filter(Boolean));
+                    return;
+                }
+                
+                // Fallback to mold_master unique vendors
+                const { data: moldData, error: moldError } = await window.supabaseClient.from('mold_master').select('vendor');
+                if (!moldError && moldData) {
+                    const unique = [...new Set(moldData.map(m => m.vendor).filter(Boolean))].sort();
+                    setVendors(unique.map(v => ({ id: v, name: v })));
+                    setAvailableVendors(unique);
+                    return;
+                }
+            }
+
+            // LocalStorage fallback
+            const local = JSON.parse(localStorage.getItem('demo_vendors') || '[]');
+            if (local.length > 0) {
+                setVendors(local.map(v => ({ id: v, name: v })));
+                setAvailableVendors(local);
             } else {
-                setAvailableVendors(['SPP', 'RTE', 'MOLD-A', 'VENDOR-B']);
+                const defaults = ['SPP', 'RMC', 'RTE'];
+                setVendors(defaults.map(v => ({ id: v, name: v })));
+                setAvailableVendors(defaults);
             }
         } catch (err) {
-            console.error('Load vendors error:', err);
+            console.error('Load vendors list error:', err);
+        }
+    };
+
+    const handleAddVendor = async () => {
+        if (!newVendor.trim()) return showToast('กรุณากรอกชื่อ Vendor', 'warning');
+        
+        try {
+            if (window.supabaseClient) {
+                const { error } = await window.supabaseClient.from('vendors').insert({ name: newVendor.trim().toUpperCase() });
+                if (error) throw error;
+            } else {
+                const local = JSON.parse(localStorage.getItem('demo_vendors') || '["SPP", "RMC", "RTE"]');
+                if (!local.includes(newVendor.trim().toUpperCase())) {
+                    local.push(newVendor.trim().toUpperCase());
+                    localStorage.setItem('demo_vendors', JSON.stringify(local));
+                }
+            }
+            showToast('เพิ่ม Vendor สำเร็จ', 'success');
+            setNewVendor('');
+            loadVendorsList();
+        } catch (err) {
+            console.error('Add vendor error:', err);
+            showToast('เพิ่ม Vendor ล้มเหลว (อาจมีชื่อนี้อยู่แล้ว)', 'error');
+        }
+    };
+
+    const handleDeleteVendor = async (vendor) => {
+        if (!window.confirm(`ยืนยันการลบ Vendor "${vendor.name}"? การลบนี้จะไม่ลบข้อมูลแม่พิมพ์ที่มีอยู่`)) return;
+        
+        try {
+            if (window.supabaseClient) {
+                if (vendor.id && typeof vendor.id === 'string' && vendor.id.length > 10) {
+                    const { error } = await window.supabaseClient.from('vendors').delete().eq('id', vendor.id);
+                    if (error) throw error;
+                } else {
+                    const { error } = await window.supabaseClient.from('vendors').delete().eq('name', vendor.name);
+                    if (error) throw error;
+                }
+            } else {
+                let local = JSON.parse(localStorage.getItem('demo_vendors') || '["SPP", "RMC", "RTE"]');
+                local = local.filter(v => v !== vendor.name);
+                localStorage.setItem('demo_vendors', JSON.stringify(local));
+            }
+            showToast('ลบ Vendor สำเร็จ', 'success');
+            loadVendorsList();
+        } catch (err) {
+            console.error('Delete vendor error:', err);
+            showToast('ลบ Vendor ล้มเหลว', 'error');
         }
     };
 
@@ -177,6 +247,54 @@ function SettingsPage({ user, showToast }) {
                                     h('div', { className: 'flex justify-end gap-2' },
                                         h('button', { className: 'btn btn-ghost btn-sm text-primary-400', onClick: () => openModal(u) }, h('i', { className: 'fa-solid fa-edit' })),
                                         h('button', { className: 'btn btn-ghost btn-sm text-red-400', onClick: () => deleteUser(u.id) }, h('i', { className: 'fa-solid fa-trash-can' }))
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            )
+        ),
+
+        // Vendor Management Section
+        h('div', { className: 'grid grid-cols-1 md:grid-cols-3 gap-6 mt-6' },
+            h('div', { className: 'card md:col-span-1 space-y-4' },
+                h('h3', { className: 'text-md font-bold text-white' }, 'เพิ่ม Vendor ใหม่'),
+                h('div', null,
+                    h('label', { className: 'block text-xs font-medium text-surface-400 mb-1.5' }, 'ชื่อ Vendor *'),
+                    h('input', { 
+                        className: 'input mb-3', 
+                        placeholder: 'เช่น SPP, RMC', 
+                        value: newVendor, 
+                        onChange: e => setNewVendor(e.target.value) 
+                    }),
+                    h('button', { className: 'btn btn-primary w-full', onClick: handleAddVendor }, 
+                        h('i', { className: 'fa-solid fa-plus mr-2' }), 'เพิ่ม Vendor'
+                    )
+                )
+            ),
+            h('div', { className: 'card md:col-span-2 p-0 overflow-hidden' },
+                h('div', { className: 'p-4 border-b border-white/5' },
+                    h('h3', { className: 'text-md font-bold text-white' }, 'รายชื่อ Vendor ทั้งหมด')
+                ),
+                h('div', { className: 'overflow-x-auto' },
+                    h('table', { className: 'data-table w-full' },
+                        h('thead', null,
+                            h('tr', null,
+                                h('th', { className: 'text-left px-4 py-3' }, 'ชื่อ Vendor'),
+                                h('th', { className: 'text-right px-4 py-3' }, 'จัดการ')
+                            )
+                        ),
+                        h('tbody', null,
+                            vendors.length === 0 ? h('tr', null, h('td', { colSpan: 2, className: 'text-center py-6 text-surface-500' }, 'ไม่พบข้อมูล Vendor'))
+                            : vendors.map((v, i) => 
+                                h('tr', { key: v.id || v.name, className: 'animate-slide-up hover:bg-white/5', style: { animationDelay: (i * 20) + 'ms' } },
+                                    h('td', { className: 'font-bold text-white px-4 py-3' }, v.name),
+                                    h('td', { className: 'text-right px-4 py-3' },
+                                        h('button', { 
+                                            className: 'btn btn-ghost btn-sm text-red-400 hover:bg-red-500/10 p-2', 
+                                            onClick: () => handleDeleteVendor(v) 
+                                        }, h('i', { className: 'fa-solid fa-trash-can' }))
                                     )
                                 )
                             )
