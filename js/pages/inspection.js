@@ -18,6 +18,7 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
     const [moldCode, setMoldCode] = React.useState('');
     const [moldInfo, setMoldInfo] = React.useState({ name: '', vendor: '', dwg: '' });
     const [notes, setNotes] = React.useState('');
+    const [images, setImages] = React.useState([]);
     const [searchQuery, setSearchQuery] = React.useState('');
     const [showMoldResults, setShowMoldResults] = React.useState(false);
 
@@ -96,6 +97,7 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
         (tmpl.items || []).forEach((_, i) => { initial[i] = null; });
         setChecklistData(initial);
         setNotes('');
+        setImages([]);
         setView('fill');
     };
 
@@ -130,6 +132,7 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
                 performed_date: new Date().toISOString().split('T')[0],
                 checklist_data: results,
                 notes: notes.trim(),
+                images: images,
                 status: 'completed',
             };
 
@@ -235,6 +238,53 @@ function InspectionPage({ user, showToast, setCurrentPage, selectedMold, clearSe
             h('div', { className: 'card' },
                 h('label', { className: 'block text-sm font-medium text-surface-300 mb-2' }, 'หมายเหตุตรวจสอบ'),
                 h('textarea', { className: 'input min-h-[100px]', value: notes, onChange: e => setNotes(e.target.value), placeholder: 'ระบุรายละเอียด...' })
+            ),
+
+            // Image Upload Section (Max 4 images)
+            h('div', { className: 'card space-y-4' },
+                h('div', { className: 'flex justify-between items-center' },
+                    h('label', { className: 'block text-sm font-medium text-surface-300' }, `รูปภาพประกอบ (สูงสุด 4 รูป) (${images.length}/4)`),
+                    images.length < 4 && h('label', { className: 'btn btn-secondary btn-sm cursor-pointer' },
+                        h('i', { className: 'fa-solid fa-camera mr-2' }), 'อัพโหลดรูปภาพ',
+                        h('input', { 
+                            type: 'file', 
+                            accept: 'image/*', 
+                            className: 'hidden', 
+                            onChange: e => {
+                                const file = e.target.files[0];
+                                if (!file) return;
+                                const reader = new FileReader();
+                                reader.onload = () => {
+                                    setImages(prev => [...prev, { base64: reader.result, caption: '' }]);
+                                };
+                                reader.readAsDataURL(file);
+                                e.target.value = ''; // Reset
+                            }
+                        })
+                    )
+                ),
+                images.length > 0 && h('div', { className: 'grid grid-cols-2 md:grid-cols-4 gap-4 mt-2' },
+                    images.map((img, i) => h('div', { key: i, className: 'relative p-2 rounded-xl bg-white/5 border border-white/10 flex flex-col space-y-2' },
+                        h('img', { src: img.base64, className: 'w-full h-24 object-cover rounded-lg' }),
+                        h('input', { 
+                            className: 'input input-xs text-xs', 
+                            placeholder: 'คำอธิบายใต้ภาพ...', 
+                            value: img.caption || '', 
+                            onChange: e => {
+                                const caption = e.target.value;
+                                setImages(prev => {
+                                    const next = [...prev];
+                                    next[i] = { ...next[i], caption };
+                                    return next;
+                                });
+                            }
+                        }),
+                        h('button', { 
+                            className: 'btn btn-ghost btn-xs text-red-400 absolute top-1 right-1 hover:bg-red-500/20 rounded-full p-1', 
+                            onClick: () => setImages(prev => prev.filter((_, idx) => idx !== i)) 
+                        }, h('i', { className: 'fa-solid fa-times' }))
+                    ))
+                )
             ),
 
             h('div', { className: 'flex justify-end gap-3 pb-12' },

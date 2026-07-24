@@ -9,6 +9,7 @@ function InspectionHistoryPage({ user, showToast }) {
     const [searchTerm, setSearchTerm] = React.useState('');
     const [filterType, setFilterType] = React.useState('all');
     const [selectedRecord, setSelectedRecord] = React.useState(null);
+    const [activePreviewImage, setActivePreviewImage] = React.useState(null);
     const [editingRecord, setEditingRecord] = React.useState(null);
     const [editFormData, setEditFormData] = React.useState(null);
     const [startDate, setStartDate] = React.useState('');
@@ -566,6 +567,21 @@ function InspectionHistoryPage({ user, showToast }) {
                     h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5' },
                         h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold mb-2' }, 'Notes / หมายเหตุ'),
                         h('p', { className: 'text-sm text-surface-200 italic' }, selectedRecord.notes || 'ไม่มีหมายเหตุเพิ่มเติม')
+                    ),
+
+                    // Images (Click to view)
+                    selectedRecord.images && selectedRecord.images.length > 0 && h('div', { className: 'p-4 rounded-xl bg-white/5 border border-white/5 space-y-3' },
+                        h('p', { className: 'text-[10px] text-surface-500 uppercase font-bold' }, `รูปภาพประกอบ (${selectedRecord.images.length} รูป) - คลิกเพื่อเปิดดู`),
+                        h('div', { className: 'flex flex-wrap gap-3' },
+                            selectedRecord.images.map((img, i) => h('button', {
+                                key: i,
+                                className: 'btn btn-secondary btn-sm',
+                                onClick: () => setActivePreviewImage(img)
+                            },
+                                h('i', { className: 'fa-solid fa-image mr-2 text-primary-400' }),
+                                img.caption ? `รูปภาพที่ ${i + 1}: ${img.caption.length > 15 ? img.caption.slice(0, 15) + '...' : img.caption}` : `รูปภาพประกอบที่ ${i + 1}`
+                            ))
+                        )
                     )
                 ),
 
@@ -599,6 +615,18 @@ function InspectionHistoryPage({ user, showToast }) {
                     h('button', { className: 'btn btn-ghost', onClick: () => setEditingRecord(null) }, 'ยกเลิก'),
                     h('button', { className: 'btn btn-primary', onClick: handleSaveEdit }, 'บันทึก')
                 )
+            )
+        ),
+
+        // Image Preview Modal
+        activePreviewImage && h('div', { 
+            className: 'fixed inset-0 z-[200] flex flex-col items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in cursor-pointer',
+            onClick: () => setActivePreviewImage(null)
+        },
+            h('div', { className: 'max-w-4xl max-h-[90vh] flex flex-col items-center justify-center space-y-4 text-center' },
+                h('img', { src: activePreviewImage.base64, className: 'max-w-full max-h-[75vh] object-contain rounded-xl border border-white/10 shadow-2xl animate-scale-in' }),
+                activePreviewImage.caption && h('p', { className: 'text-white text-base font-medium px-4 py-2 rounded bg-black/60 max-w-lg' }, activePreviewImage.caption),
+                h('p', { className: 'text-xs text-surface-400' }, 'คลิกพื้นที่ใดๆ เพื่อปิดรูปภาพ')
             )
         )
     );
