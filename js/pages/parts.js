@@ -71,7 +71,7 @@ function PartsPage({ user, showToast }) {
                     query = query.in('vendor', vendors);
                 }
                 
-                const { data, error } = await query.order('mold_code').limit(50);
+                const { data, error } = await query.order('mold_code').limit(2000);
                 if (error) throw error;
                 setMolds(data || []);
             } else {
@@ -110,7 +110,8 @@ function PartsPage({ user, showToast }) {
             closeModal();
             loadMolds();
         } catch (err) {
-            showToast('บันทึกล้มเหลว', 'error');
+            console.error('Save mold error:', err);
+            showToast('บันทึกล้มเหลว: ' + (err.message || 'ข้อผิดพลาดฐานข้อมูล'), 'error');
         }
     };
 
