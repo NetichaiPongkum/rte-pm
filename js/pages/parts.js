@@ -255,27 +255,35 @@ function PartsPage({ user, showToast }) {
                 h('div', { className: 'grid grid-cols-2 gap-4' },
                     h('div', { className: 'col-span-2' },
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'ASSET1 (Mold Code) *'),
-                        h('input', { className: 'input', value: formData.mold_code, onChange: e => setFormData({...formData, mold_code: e.target.value}), disabled: !!editingId })
+                        h('input', { className: 'input', value: formData.mold_code || '', onChange: e => setFormData({...formData, mold_code: e.target.value}), disabled: !!editingId })
                     ),
                     h('div', { className: 'col-span-2' },
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'NAME MOLD'),
-                        h('input', { className: 'input', value: formData.mold_name, onChange: e => setFormData({...formData, mold_name: e.target.value}) })
+                        h('input', { className: 'input', value: formData.mold_name || '', onChange: e => setFormData({...formData, mold_name: e.target.value}) })
                     ),
                     h('div', { className: 'col-span-2' },
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'DWG PART'),
-                        h('input', { className: 'input', value: formData.dwg_part1, onChange: e => setFormData({...formData, dwg_part1: e.target.value}) })
+                        h('input', { className: 'input', value: formData.dwg_part1 || '', onChange: e => setFormData({...formData, dwg_part1: e.target.value}) })
                     ),
                     h('div', { className: 'col-span-2' },
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'PART NAME'),
-                        h('input', { className: 'input', value: formData.part_name, onChange: e => setFormData({...formData, part_name: e.target.value}) })
+                        h('input', { className: 'input', value: formData.part_name || '', onChange: e => setFormData({...formData, part_name: e.target.value}) })
                     ),
                     h('div', null,
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'VENDOR'),
-                        h('input', { className: 'input', value: formData.vendor, onChange: e => setFormData({...formData, vendor: e.target.value}) })
+                        h('input', { className: 'input', value: formData.vendor || '', onChange: e => setFormData({...formData, vendor: e.target.value}) })
                     ),
                     h('div', null,
                         h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'CAV'),
-                        h('input', { type: 'number', className: 'input', value: formData.cavity, onChange: e => setFormData({...formData, cavity: e.target.value}) })
+                        h('input', { type: 'number', className: 'input', value: formData.cavity || '', onChange: e => setFormData({...formData, cavity: e.target.value}) })
+                    ),
+                    h('div', null,
+                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'M/C (TON)'),
+                        h('input', { className: 'input', value: formData.machine_no || '', onChange: e => setFormData({...formData, machine_no: e.target.value}) })
+                    ),
+                    h('div', null,
+                        h('label', { className: 'block text-xs font-medium text-surface-400 mb-1' }, 'MOLD TYPE'),
+                        h('input', { className: 'input', value: formData.mold_type || '', onChange: e => setFormData({...formData, mold_type: e.target.value}) })
                     ),
                 ),
                 h('div', { className: 'flex justify-end gap-3 mt-8' },
